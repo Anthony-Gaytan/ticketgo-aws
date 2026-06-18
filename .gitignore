@@ -1,0 +1,19 @@
+# Node
+node_modules/
+dist/
+
+# .NET
+bin/
+obj/
+
+# IDE
+.vscode/
+.vs/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Variables
+.env

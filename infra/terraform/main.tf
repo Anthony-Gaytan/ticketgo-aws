@@ -302,3 +302,21 @@ resource "aws_lb_listener" "http_listener" {
     target_group_arn = aws_lb_target_group.ticketgo_tg.arn
   }
 }
+
+# ============================================================
+# AMAZON ECR - REPOSITORIO DE IMÁGENES DOCKER
+# ============================================================
+# ECR almacenará la imagen Docker del backend .NET 8.
+# Luego ECS Fargate descargará esta imagen para ejecutar la API.
+resource "aws_ecr_repository" "ticketgo_api" {
+  name                 = "ticketgo-api"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  tags = {
+    Name = "ticketgo-api"
+  }
+}

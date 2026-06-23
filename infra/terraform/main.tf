@@ -273,7 +273,7 @@ resource "aws_lb_target_group" "ticketgo_tg" {
   target_type = "ip"
 
   health_check {
-    path                = "/"
+    path                = "/health"
     protocol            = "HTTP"
     matcher             = "200-399"
     interval            = 30
@@ -450,6 +450,16 @@ resource "aws_ecs_service" "ticketgo_api_service" {
     security_groups  = [aws_security_group.ecs_sg.id]
     assign_public_ip = true
   }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.ticketgo_tg.arn
+    container_name   = "ticketgo-api"
+    container_port   = 8080
+  }
+
+  depends_on = [
+    aws_lb_listener.http_listener
+  ]
 
   tags = {
     Name = "ticketgo-api-service"

@@ -320,3 +320,138 @@ resource "aws_ecr_repository" "ticketgo_api" {
     Name = "ticketgo-api"
   }
 }
+
+# ============================================================
+# ECS CLUSTER - TICKETGO
+# ============================================================
+# El cluster ECS será el contenedor lógico donde más adelante
+# se ejecutarán las tareas Fargate del backend .NET 8.
+# Crear el cluster por sí solo no ejecuta contenedores ni genera
+# consumo de CPU o memoria.
+resource "aws_ecs_cluster" "ticketgo_cluster" {
+  name = "ticketgo-cluster"
+
+  tags = {
+    Name = "ticketgo-cluster"
+  }
+}
+
+# ============================================================
+# IAM ROLE PARA ECS TASK EXECUTION
+# ============================================================
+# Permite que ECS Fargate pueda descargar la imagen desde ECR
+# y enviar logs hacia CloudWatch.
+resource "aws_iam_role" "ecs_task_execution_role" {
+  name = "ticketgo-ecs-task-execution-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = {
+    Name = "ticketgo-ecs-task-execution-role"
+  }
+}
+
+# ============================================================
+# POLÍTICA ADMINISTRADA PARA ECS TASK EXECUTION
+# ============================================================
+# Otorga permisos estándar para que ECS lea imágenes de ECR
+# y escriba logs en CloudWatch.
+resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
+  role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+# ============================================================
+# CLOUDWATCH LOG GROUP PARA LA API
+# ============================================================
+# Aquí se almacenarán los logs del contenedor cuando ECS ejecute la API.
+resource "aws_cloudwatch_log_group" "ticketgo_api_logs" {
+  name              = "/ecs/ticketgo-api"
+  retention_in_days = 7
+
+  tags = {
+    Name = "ticketgo-api-logs"
+  }
+}
+
+# ============================================================
+# ECS TASK DEFINITION - BACKEND TICKETGO
+# ============================================================
+# Define cómo se ejecutará el contenedor de la API .NET 8:
+# imagen Docker, CPU, memoria, puerto y configuración de logs.
+resource "aws_ecs_task_definition" "ticketgo_api_task" {
+  family                   = "ticketgo-api-task"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+
+  container_definitions = jsonencode([
+    {
+      name      = "ticketgo-api"
+      image     = "329871097383.dkr.ecr.us-east-2.amazonaws.com/ticketgo-api:v1"
+      essential = true
+
+      portMappings = [
+        {
+          containerPort = 8080
+          hostPort      = 8080
+          protocol      = "tcp"
+        }
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/ticketgo-api"
+          awslogs-region        = "us-east-2"
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    }
+  ])
+
+  tags = {
+    Name = "ticketgo-api-task"
+  }
+}
+
+# ============================================================
+# ECS SERVICE TEMPORAL - PRUEBA SIN ALB
+# ============================================================
+# Ejecuta una tarea Fargate usando la imagen subida a ECR.
+# Para evitar NAT Gateway por ahora, se ejecuta temporalmente
+# en subredes públicas con IP pública.
+resource "aws_ecs_service" "ticketgo_api_service" {
+  name            = "ticketgo-api-service"
+  cluster         = aws_ecs_cluster.ticketgo_cluster.id
+  task_definition = aws_ecs_task_definition.ticketgo_api_task.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets = [
+      aws_subnet.public_az1.id,
+      aws_subnet.public_az2.id
+    ]
+
+    security_groups  = [aws_security_group.ecs_sg.id]
+    assign_public_ip = true
+  }
+
+  tags = {
+    Name = "ticketgo-api-service"
+  }
+}

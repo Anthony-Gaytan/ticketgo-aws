@@ -172,3 +172,133 @@ resource "aws_subnet" "private_data_az2" {
     Name = "ticketgo-private-data-az2"
   }
 }
+
+# ============================================================
+# SECURITY GROUP DEL APPLICATION LOAD BALANCER
+# ============================================================
+# Este grupo de seguridad permite que el ALB reciba tráfico HTTP
+# desde Internet. Más adelante, cuando usemos dominio y certificado,
+# también se podrá habilitar HTTPS.
+resource "aws_security_group" "alb_sg" {
+  name        = "ticketgo-alb-sg"
+  description = "Permite trafico HTTP publico hacia el ALB"
+  vpc_id      = aws_vpc.ticketgo_vpc.id
+
+  ingress {
+    description = "HTTP desde Internet"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Salida permitida hacia cualquier destino"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "ticketgo-alb-sg"
+  }
+}
+
+# ============================================================
+# SECURITY GROUP DE ECS FARGATE
+# ============================================================
+# Este grupo de seguridad protege los contenedores del backend.
+# Solo permite tráfico desde el Security Group del ALB.
+# Es decir, Internet no puede acceder directamente a ECS.
+resource "aws_security_group" "ecs_sg" {
+  name        = "ticketgo-ecs-sg"
+  description = "Permite trafico hacia ECS solo desde el ALB"
+  vpc_id      = aws_vpc.ticketgo_vpc.id
+
+  ingress {
+    description     = "HTTP desde ALB hacia ECS"
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
+  }
+
+  egress {
+    description = "Salida permitida hacia cualquier destino"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "ticketgo-ecs-sg"
+  }
+}
+
+# ============================================================
+# APPLICATION LOAD BALANCER - ALB
+# ============================================================
+# El ALB recibe tráfico HTTP desde Internet y lo distribuye
+# hacia los servicios internos de la aplicación.
+# Se coloca en las dos subredes públicas para alta disponibilidad.
+resource "aws_lb" "ticketgo_alb" {
+  name               = "ticketgo-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb_sg.id]
+
+  subnets = [
+    aws_subnet.public_az1.id,
+    aws_subnet.public_az2.id
+  ]
+
+  tags = {
+    Name = "ticketgo-alb"
+  }
+}
+
+# ============================================================
+# TARGET GROUP DEL BACKEND
+# ============================================================
+# El Target Group representa el destino al que el ALB enviará
+# las solicitudes. Más adelante aquí se registrarán las tareas
+# ECS Fargate que ejecutarán la API .NET.
+resource "aws_lb_target_group" "ticketgo_tg" {
+  name        = "ticketgo-tg"
+  port        = 8080
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.ticketgo_vpc.id
+  target_type = "ip"
+
+  health_check {
+    path                = "/"
+    protocol            = "HTTP"
+    matcher             = "200-399"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+  }
+
+  tags = {
+    Name = "ticketgo-tg"
+  }
+}
+
+# ============================================================
+# LISTENER HTTP DEL ALB
+# ============================================================
+# El Listener escucha peticiones HTTP en el puerto 80.
+# Cuando recibe tráfico, lo reenvía al Target Group del backend.
+resource "aws_lb_listener" "http_listener" {
+  load_balancer_arn = aws_lb.ticketgo_alb.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.ticketgo_tg.arn
+  }
+}

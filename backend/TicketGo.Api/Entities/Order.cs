@@ -14,4 +14,5 @@ public class Order
 
     // Relación 1:N -> Una orden puede tener varios tickets
     public ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
+    public ICollection<OrderDetail> Details { get; set; } = new List<OrderDetail>();
 }

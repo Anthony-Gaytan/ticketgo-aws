@@ -1,7 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TicketGo.Api.Data;
-using TicketGo.Api.Entities;
+using TicketGo.Api.DTOs.Tickets;
+using TicketGo.Api.Interfaces.Services;
 
 namespace TicketGo.Api.Controllers;
 
@@ -9,49 +9,44 @@ namespace TicketGo.Api.Controllers;
 [Route("api/[controller]")]
 public class TicketsController : ControllerBase
 {
-    private readonly TicketGoDbContext _context;
+    private readonly ITicketService _ticketService;
 
-    public TicketsController(TicketGoDbContext context)
+    public TicketsController(ITicketService ticketService)
     {
-        _context = context;
+        _ticketService = ticketService;
     }
 
+    /// <summary>
+    /// Lista todos los tickets.
+    /// Solo Administradores.
+    /// </summary>
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetAll()
     {
-        var tickets = await _context.Tickets
-            .Include(t => t.Event)
-            .Include(t => t.Order)
-            .ToListAsync();
-
+        var tickets = await _ticketService.GetAllAsync();
         return Ok(tickets);
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateTicketRequest request)
+    /// <summary>
+    /// Lista los tickets del usuario autenticado.
+    /// </summary>
+    [HttpGet("my-tickets")]
+    [Authorize]
+    public async Task<IActionResult> GetMyTickets()
     {
-        var eventExists = await _context.Events.AnyAsync(e => e.Id == request.EventId);
-
-        if (!eventExists)
-        {
-            return BadRequest($"No existe un evento con el Id: {request.EventId}");
-        }
-
-        var ticket = new Ticket
-        {
-            EventId = request.EventId,
-            Code = Guid.NewGuid().ToString("N"),
-            IsUsed = false
-        };
-
-        _context.Tickets.Add(ticket);
-        await _context.SaveChangesAsync();
-
-        return Ok(ticket);
+        var tickets = await _ticketService.GetMyTicketsAsync(User);
+        return Ok(tickets);
     }
-}
 
-public class CreateTicketRequest
-{
-    public Guid EventId { get; set; }
+    /// <summary>
+    /// Valida un ticket para permitir el ingreso al evento.
+    /// </summary>
+    [HttpPost("validate")]
+    [Authorize(Roles = "Admin,Organizer")]
+    public async Task<IActionResult> Validate([FromBody] ValidateTicketRequestDto request)
+    {
+        var result = await _ticketService.ValidateAsync(request, User);
+        return Ok(result);
+    }
 }

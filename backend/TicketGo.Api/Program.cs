@@ -38,6 +38,8 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IEventTicketTypeService, EventTicketTypeService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<ITicketService, TicketService>();
 
 Console.WriteLine("Servicios registrados correctamente");
 

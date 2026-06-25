@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TicketGo.Api.Data;
@@ -11,9 +12,11 @@ using TicketGo.Api.Data;
 namespace TicketGo.Api.Migrations
 {
     [DbContext(typeof(TicketGoDbContext))]
-    partial class TicketGoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260625095156_AddEventTicketTypeToTickets")]
+    partial class AddEventTicketTypeToTickets
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -183,9 +186,6 @@ namespace TicketGo.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("CheckedBy")
-                        .HasColumnType("text");
-
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasColumnType("text");
@@ -196,32 +196,11 @@ namespace TicketGo.Api.Migrations
                     b.Property<Guid>("EventTicketTypeId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("HolderEmail")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("HolderName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<bool>("IsUsed")
                         .HasColumnType("boolean");
 
-                    b.Property<DateTime>("IssuedAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<Guid?>("OrderId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("QRCode")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("UsedAt")
-                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 

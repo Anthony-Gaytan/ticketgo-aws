@@ -101,7 +101,7 @@ public class OrdersController : ControllerBase
             Message = "Ticket agregado correctamente a la orden.",
             OrderId = order.Id,
             TicketId = ticket.Id,
-            Event = ticket.Event.Name,
+            ticket.Event.Title,
             TicketCode = ticket.Code
         });
     }

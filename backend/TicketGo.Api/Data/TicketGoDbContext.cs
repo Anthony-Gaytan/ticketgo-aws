@@ -14,6 +14,7 @@ public class TicketGoDbContext : DbContext
     public DbSet<Event> Events => Set<Event>();
     public DbSet<Ticket> Tickets => Set<Ticket>();
     public DbSet<Order> Orders => Set<Order>();
+    public DbSet<EventTicketType> EventTicketTypes => Set<EventTicketType>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -24,6 +25,20 @@ public class TicketGoDbContext : DbContext
             .HasOne(o => o.User)
             .WithMany(u => u.Orders)
             .HasForeignKey(o => o.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // User 1 -> N Events (Organizer)
+        modelBuilder.Entity<Event>()
+            .HasOne(e => e.Organizer)
+            .WithMany()
+            .HasForeignKey(e => e.OrganizerId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Event 1 -> N EventTicketTypes
+        modelBuilder.Entity<EventTicketType>()
+            .HasOne(tt => tt.Event)
+            .WithMany(e => e.TicketTypes)
+            .HasForeignKey(tt => tt.EventId)
             .OnDelete(DeleteBehavior.Restrict);
 
         // Event 1 -> N Tickets

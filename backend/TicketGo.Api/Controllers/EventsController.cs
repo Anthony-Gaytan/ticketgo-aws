@@ -1,7 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TicketGo.Api.Data;
-using TicketGo.Api.Entities;
+using TicketGo.Api.DTOs.Events;
+using TicketGo.Api.Interfaces.Services;
 
 namespace TicketGo.Api.Controllers;
 
@@ -9,26 +9,66 @@ namespace TicketGo.Api.Controllers;
 [Route("api/[controller]")]
 public class EventsController : ControllerBase
 {
-    private readonly TicketGoDbContext _context;
+    private readonly IEventService _eventService;
 
-    public EventsController(TicketGoDbContext context)
+    public EventsController(IEventService eventService)
     {
-        _context = context;
+        _eventService = eventService;
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetAll()
     {
-        var events = await _context.Events.ToListAsync();
+        var events = await _eventService.GetAllAsync();
         return Ok(events);
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Create(Event newEvent)
+    [HttpGet("{id}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetById(Guid id)
     {
-        _context.Events.Add(newEvent);
-        await _context.SaveChangesAsync();
+        var eventDetail = await _eventService.GetByIdAsync(id);
+        return Ok(eventDetail);
+    }
 
-        return CreatedAtAction(nameof(GetAll), newEvent);
+    [HttpPost]
+    [Authorize(Roles = "Admin,Organizer")]
+    public async Task<IActionResult> Create([FromBody] CreateEventDto request)
+    {
+        var created = await _eventService.CreateAsync(request, User);
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+    }
+
+    [HttpPut("{id}")]
+    [Authorize(Roles = "Admin,Organizer")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateEventDto request)
+    {
+        var updated = await _eventService.UpdateAsync(id, request, User);
+        return Ok(updated);
+    }
+
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin,Organizer")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        await _eventService.DeleteAsync(id, User);
+        return NoContent();
+    }
+
+    [HttpPatch("{id}/publish")]
+    [Authorize(Roles = "Admin,Organizer")]
+    public async Task<IActionResult> Publish(Guid id)
+    {
+        var published = await _eventService.PublishAsync(id, User);
+        return Ok(published);
+    }
+
+    [HttpPatch("{id}/cancel")]
+    [Authorize(Roles = "Admin,Organizer")]
+    public async Task<IActionResult> Cancel(Guid id)
+    {
+        var cancelled = await _eventService.CancelAsync(id, User);
+        return Ok(cancelled);
     }
 }

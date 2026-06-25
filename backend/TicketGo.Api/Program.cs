@@ -36,6 +36,8 @@ builder.Services.AddAutoMapper(typeof(MappingProfile));
 // Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IEventService, EventService>();
+builder.Services.AddScoped<IEventTicketTypeService, EventTicketTypeService>();
 
 Console.WriteLine("Servicios registrados correctamente");
 

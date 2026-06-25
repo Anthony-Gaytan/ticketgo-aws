@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TicketGo.Api.Data;
@@ -11,9 +12,11 @@ using TicketGo.Api.Data;
 namespace TicketGo.Api.Migrations
 {
     [DbContext(typeof(TicketGoDbContext))]
-    partial class TicketGoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260625081929_UpdateEventModule")]
+    partial class UpdateEventModule
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -85,41 +88,6 @@ namespace TicketGo.Api.Migrations
                     b.HasIndex("OrganizerId");
 
                     b.ToTable("Events");
-                });
-
-            modelBuilder.Entity("TicketGo.Api.Entities.EventTicketType", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("EventId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("numeric");
-
-                    b.Property<int>("SoldQuantity")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Stock")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EventId");
-
-                    b.ToTable("EventTicketTypes");
                 });
 
             modelBuilder.Entity("TicketGo.Api.Entities.Order", b =>
@@ -216,17 +184,6 @@ namespace TicketGo.Api.Migrations
                     b.Navigation("Organizer");
                 });
 
-            modelBuilder.Entity("TicketGo.Api.Entities.EventTicketType", b =>
-                {
-                    b.HasOne("TicketGo.Api.Entities.Event", "Event")
-                        .WithMany("TicketTypes")
-                        .HasForeignKey("EventId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Event");
-                });
-
             modelBuilder.Entity("TicketGo.Api.Entities.Order", b =>
                 {
                     b.HasOne("TicketGo.Api.Entities.User", "User")
@@ -258,8 +215,6 @@ namespace TicketGo.Api.Migrations
 
             modelBuilder.Entity("TicketGo.Api.Entities.Event", b =>
                 {
-                    b.Navigation("TicketTypes");
-
                     b.Navigation("Tickets");
                 });
 

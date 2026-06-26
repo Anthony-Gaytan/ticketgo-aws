@@ -40,6 +40,7 @@ builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IEventTicketTypeService, EventTicketTypeService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
+builder.Services.AddScoped<IQrService, QrService>();
 
 Console.WriteLine("Servicios registrados correctamente");
 

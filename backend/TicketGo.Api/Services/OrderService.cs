@@ -10,10 +10,14 @@ namespace TicketGo.Api.Services;
 public class OrderService : IOrderService
 {
     private readonly TicketGoDbContext _context;
+    private readonly IQrService _qrService;
 
-    public OrderService(TicketGoDbContext context)
+    public OrderService(
+        TicketGoDbContext context,
+        IQrService qrService)
     {
         _context = context;
+        _qrService = qrService;
     }
 
     public async Task<List<OrderResponseDto>> GetAllAsync()
@@ -105,12 +109,16 @@ public class OrderService : IOrderService
 
         for (var i = 0; i < request.Quantity; i++)
         {
+            var ticketCode = Guid.NewGuid().ToString("N");
+            var qrContent = $"TICKETGO:{ticketCode}";
+
             var ticket = new Ticket
             {
                 EventId = ticketType.EventId,
                 EventTicketTypeId = ticketType.Id,
                 Order = order,
-                Code = Guid.NewGuid().ToString("N"),
+                Code = ticketCode,
+                QRCode = _qrService.GenerateQrBase64(qrContent),
                 Status = "Issued",
                 IssuedAt = DateTime.UtcNow,
                 HolderName = user.FindFirst(ClaimTypes.Name)?.Value ?? string.Empty,
@@ -118,7 +126,7 @@ public class OrderService : IOrderService
                 IsUsed = false
             };
 
-            ticketCodes.Add(ticket.Code);
+            ticketCodes.Add(ticketCode);
             _context.Tickets.Add(ticket);
         }
 

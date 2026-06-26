@@ -19,7 +19,7 @@
 # Luego ECS Fargate descargará esta imagen para ejecutar la API.
 resource "aws_ecr_repository" "ticketgo_api" {
   name                 = "ticketgo-api"
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
 
   image_scanning_configuration {
     scan_on_push = true

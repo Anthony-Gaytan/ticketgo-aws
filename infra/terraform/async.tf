@@ -10,6 +10,11 @@
 # después de 3 intentos, evitando pérdida de datos y
 # permitiendo investigar errores.
 #
+# Seguridad: Ambas colas tienen encriptación en reposo
+# habilitada con SSE-SQS (clave administrada por AWS, sin costo).
+# Esto cumple con AWS Well-Architected Framework SEC09-BP01
+# y satisface el check de seguridad CKV_AWS_27.
+#
 # Costo: Free Tier incluye 1 millón de mensajes SQS gratis.
 # ============================================================
 
@@ -20,6 +25,10 @@
 # de maxReceiveCount intentos. Permite debugging y reproceso.
 resource "aws_sqs_queue" "ticketgo_notifications_dlq" {
   name = "ticketgo-notifications-dlq"
+
+  # Encriptación en reposo con clave administrada por SQS (SSE-SQS)
+  # Cumple CKV_AWS_27 
+  sqs_managed_sse_enabled = true
 
   tags = {
     Name = "ticketgo-notifications-dlq"
@@ -35,6 +44,10 @@ resource "aws_sqs_queue" "ticketgo_notifications_dlq" {
 # Si un mensaje falla 3 veces, se mueve automáticamente a la DLQ.
 resource "aws_sqs_queue" "ticketgo_notifications" {
   name = "ticketgo-notifications"
+
+  # Encriptación en reposo con clave administrada por SQS (SSE-SQS)
+  # Cumple CKV_AWS_27 
+  sqs_managed_sse_enabled = true
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.ticketgo_notifications_dlq.arn

@@ -1,0 +1,61 @@
+# ============================================================
+# TERRAFORM CI - TICKETGO AWS
+# ============================================================
+# Pipeline de integración continua que se ejecuta
+# automáticamente en cada Pull Request que modifica
+# archivos de Terraform.
+#
+# Validaciones:
+#   1. terraform fmt -check → Formato consistente
+#   2. terraform init → Inicialización del provider
+#   3. terraform validate → Sintaxis correcta
+#   4. Checkov → Análisis de seguridad IaC
+# ============================================================
+
+name: Terraform CI
+
+on:
+  pull_request:
+    paths:
+      - 'infra/terraform/**'
+
+jobs:
+  validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.0
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        working-directory: infra/terraform
+
+      - name: Terraform Init
+        run: terraform init -backend=false
+        working-directory: infra/terraform
+
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: infra/terraform
+
+  checkov:
+    name: Checkov Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: infra/terraform
+          quiet: true
+          framework: terraform

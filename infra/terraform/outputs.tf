@@ -94,3 +94,50 @@ output "lambda_function_name" {
   description = "Nombre de la función Lambda"
   value       = aws_lambda_function.ticketgo_notification_processor.function_name
 }
+
+# ------------------------------------------------------------
+# BASE DE DATOS
+# ------------------------------------------------------------
+
+output "rds_endpoint" {
+  description = "Endpoint de conexión a RDS PostgreSQL"
+  value       = aws_db_instance.ticketgo_db.endpoint
+}
+
+output "rds_db_name" {
+  description = "Nombre de la base de datos"
+  value       = aws_db_instance.ticketgo_db.db_name
+}
+
+# ------------------------------------------------------------
+# SEGURIDAD
+# ------------------------------------------------------------
+
+output "secrets_db_arn" {
+  description = "ARN del secreto de credenciales de base de datos"
+  value       = aws_secretsmanager_secret.ticketgo_db_credentials.arn
+}
+
+output "secrets_jwt_arn" {
+  description = "ARN del secreto de clave JWT"
+  value       = aws_secretsmanager_secret.ticketgo_jwt_secret.arn
+}
+
+# ------------------------------------------------------------
+# FRONTEND (CDN)
+# ------------------------------------------------------------
+
+output "cloudfront_domain" {
+  description = "Dominio de CloudFront para acceder al frontend"
+  value       = aws_cloudfront_distribution.ticketgo_cdn.domain_name
+}
+
+output "cloudfront_url" {
+  description = "URL completa del frontend"
+  value       = "https://${aws_cloudfront_distribution.ticketgo_cdn.domain_name}"
+}
+
+output "s3_bucket_name" {
+  description = "Nombre del bucket S3 del frontend"
+  value       = aws_s3_bucket.ticketgo_frontend.id
+}

@@ -25,6 +25,10 @@ resource "aws_ecr_repository" "ticketgo_api" {
     scan_on_push = true
   }
 
+  encryption_configuration {
+    encryption_type = "KMS"
+  }
+
   tags = {
     Name = "ticketgo-api"
   }

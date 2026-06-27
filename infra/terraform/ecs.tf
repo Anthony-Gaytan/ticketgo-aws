@@ -20,10 +20,17 @@
 # ============================================================
 # El cluster ECS será el contenedor lógico donde se ejecutarán
 # las tareas Fargate del backend .NET 8.
-# Crear el cluster por sí solo no ejecuta contenedores ni genera
-# consumo de CPU o memoria.
+#
+# Se habilita Container Insights para que CloudWatch recopile
+# métricas de CPU, memoria, tareas y rendimiento del clúster.
+# Esta configuración elimina el hallazgo CKV_AWS_65 de Checkov.
 resource "aws_ecs_cluster" "ticketgo_cluster" {
   name = "ticketgo-cluster"
+
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
 
   tags = {
     Name = "ticketgo-cluster"

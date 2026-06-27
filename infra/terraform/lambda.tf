@@ -32,8 +32,9 @@ resource "aws_lambda_function" "ticketgo_notification_processor" {
   filename         = "${path.module}/lambda/ticketgo-notification-processor.zip"
   source_code_hash = filebase64sha256("${path.module}/lambda/ticketgo-notification-processor.zip")
 
-  timeout     = var.lambda_timeout
-  memory_size = var.lambda_memory
+  timeout                        = var.lambda_timeout
+  memory_size                    = var.lambda_memory
+  reserved_concurrent_executions = 5
 
   depends_on = [
     aws_cloudwatch_log_group.ticketgo_lambda_logs

@@ -24,6 +24,10 @@
 # función demo que loguea los mensajes recibidos.
 # En fases posteriores integrará SES para enviar emails.
 resource "aws_lambda_function" "ticketgo_notification_processor" {
+  # checkov:skip=CKV_AWS_116:La funcion Lambda es invocada mediante Event Source Mapping por SQS. El manejo de fallos y la cola de mensajes no procesados (DLQ) esta configurada directamente en la cola SQS principal, por lo que no es necesario configurarla en la funcion Lambda.
+  # checkov:skip=CKV_AWS_173:Para un ambiente de demo, las variables de entorno de Lambda se cifran con la clave por defecto de AWS (aws/lambda) en lugar de una KMS CMK personalizada para evitar costos adicionales de KMS.
+  # checkov:skip=CKV_AWS_117:Para un ambiente de demo, la funcion Lambda no se ejecuta dentro de una VPC para evitar la complejidad y el costo de configurar NAT Gateways o VPC Endpoints para acceder a servicios publicos como SQS y SES.
+  # checkov:skip=CKV_AWS_272:Para un ambiente de demo y desarrollo, no se utiliza firma de codigo (Code Signing) en las funciones Lambda para simplificar el pipeline de despliegue.
   function_name = "ticketgo-notification-processor"
   role          = aws_iam_role.lambda_execution_role.arn
   runtime       = var.lambda_runtime
@@ -35,6 +39,10 @@ resource "aws_lambda_function" "ticketgo_notification_processor" {
   timeout                        = var.lambda_timeout
   memory_size                    = var.lambda_memory
   reserved_concurrent_executions = 5
+
+  tracing_config {
+    mode = "Active"
+  }
 
   environment {
     variables = {

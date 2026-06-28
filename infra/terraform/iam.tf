@@ -76,6 +76,15 @@ resource "aws_iam_role" "lambda_execution_role" {
 }
 
 # ============================================================
+# PERMISOS DE X-RAY PARA LAMBDA
+# ============================================================
+# Permite que la funcion Lambda escriba datos de trazas en AWS X-Ray.
+resource "aws_iam_role_policy_attachment" "lambda_xray" {
+  role       = aws_iam_role.lambda_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess"
+}
+
+# ============================================================
 # POLÍTICA INLINE PARA LAMBDA (SQS + CLOUDWATCH LOGS)
 # ============================================================
 # Otorga a Lambda los permisos para:

@@ -17,6 +17,8 @@
 # Aquí se almacenarán los logs del contenedor cuando ECS ejecute la API.
 # La retención de 7 días es suficiente para debugging en desarrollo.
 resource "aws_cloudwatch_log_group" "ticketgo_api_logs" {
+  # checkov:skip=CKV_AWS_158:Para un ambiente de demo, el cifrado con KMS de los Log Groups de CloudWatch esta desactivado para evitar costos innecesarios de KMS ($1/mes por clave mas costos de llamadas).
+  # checkov:skip=CKV_AWS_338:Para un ambiente de demo, la retencion de logs es de 7 dias (definido por var.log_retention_days) para optimizar costos de almacenamiento en CloudWatch, lo cual es suficiente para pruebas y desarrollo.
   name              = "/ecs/ticketgo-api"
   retention_in_days = var.log_retention_days
 
@@ -31,6 +33,8 @@ resource "aws_cloudwatch_log_group" "ticketgo_api_logs" {
 # Almacena los logs de ejecución de la función Lambda
 # que procesa notificaciones desde SQS.
 resource "aws_cloudwatch_log_group" "ticketgo_lambda_logs" {
+  # checkov:skip=CKV_AWS_158:Para un ambiente de demo, el cifrado con KMS de los Log Groups de CloudWatch esta desactivado para evitar costos innecesarios de KMS ($1/mes por clave mas costos de llamadas).
+  # checkov:skip=CKV_AWS_338:Para un ambiente de demo, la retencion de logs es de 7 dias (definido por var.log_retention_days) para optimizar costos de almacenamiento en CloudWatch, lo cual es suficiente para pruebas y desarrollo.
   name              = "/aws/lambda/ticketgo-notification-processor"
   retention_in_days = var.log_retention_days
 

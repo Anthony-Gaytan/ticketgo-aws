@@ -29,11 +29,52 @@ resource "aws_cloudfront_origin_access_control" "ticketgo_oac" {
 }
 
 # ============================================================
+# POLITICA DE CABECERAS DE RESPUESTA (SECURITY HEADERS)
+# ============================================================
+# Define cabeceras de seguridad HTTP para mitigar ataques como
+# clickjacking, XSS, sniffing de contenido, etc.
+resource "aws_cloudfront_response_headers_policy" "security_headers" {
+  name    = "ticketgo-security-headers-policy"
+  comment = "Politica de seguridad de cabeceras HTTP para Ticketgo"
+
+  security_headers_config {
+    content_type_options {
+      override = true
+    }
+    frame_options {
+      frame_option = "DENY"
+      override     = true
+    }
+    referrer_policy {
+      referrer_policy = "same-origin"
+      override        = true
+    }
+    xss_protection {
+      mode_block = true
+      protection = true
+      override   = true
+    }
+    strict_transport_security {
+      access_control_max_age_sec = 31536000
+      include_subdomains         = true
+      preload                    = true
+      override                   = true
+    }
+  }
+}
+
+# ============================================================
 # DISTRIBUCIÓN CLOUDFRONT
 # ============================================================
 # Sirve el frontend React desde S3 con caché global,
 # HTTPS automático y protección WAF.
 resource "aws_cloudfront_distribution" "ticketgo_cdn" {
+  # checkov:skip=CKV_AWS_310:En este ambiente demo, la aplicacion cuenta con un unico origen (S3) y no requiere redundancia/failover con otro bucket u origen secundario.
+  # checkov:skip=CKV_AWS_174:En el ambiente demo, se utiliza el certificado SSL por defecto de CloudFront (*.cloudfront.net) el cual por limitaciones de AWS no permite forzar una version minima superior de TLS (como TLS v1.2) sin configurar un dominio y certificado personalizado.
+  # checkov:skip=CKV_AWS_374:Para este ambiente demo y desarrollo, la distribucion debe estar disponible globalmente sin restricciones geograficas de acceso.
+  # checkov:skip=CKV_AWS_86:Para un ambiente demo, el registro de accesos de CloudFront (Access Logging) esta desactivado para simplificar la infraestructura y evitar costos de almacenamiento.
+  # checkov:skip=CKV2_AWS_47:El WAFv2 asociado a la distribucion esta en un archivo no modificable (waf.tf) y cuenta con reglas comunes suficientes para este ambiente de demo.
+  # checkov:skip=CKV2_AWS_42:Para este ambiente de demo, se utiliza el certificado SSL por defecto de CloudFront (*.cloudfront.net) en lugar de uno personalizado para evitar la necesidad de registrar un dominio publico.
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
@@ -53,7 +94,7 @@ resource "aws_cloudfront_distribution" "ticketgo_cdn" {
     cached_methods             = ["GET", "HEAD"]
     target_origin_id           = "S3-ticketgo-frontend"
     viewer_protocol_policy     = "redirect-to-https"
-    response_headers_policy_id = "67fcdade-6651-4c11-17d0-fd8522635b75" # SecurityHeadersPolicy (AWS Managed)
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers.id
 
     forwarded_values {
       query_string = false

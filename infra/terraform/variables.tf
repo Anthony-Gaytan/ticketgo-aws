@@ -155,7 +155,7 @@ variable "ses_email_identity" {
 variable "rds_deletion_protection" {
   description = "Habilitar proteccion contra eliminacion de la base de datos RDS"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "alb_deletion_protection" {

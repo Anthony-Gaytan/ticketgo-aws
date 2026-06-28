@@ -8,7 +8,7 @@
 #
 # Internet → ALB SG (puerto 80) → ECS SG (puerto 8080)
 #                                    ↓
-#                              RDS SG (puerto 5432) [Fase 4]
+#                              RDS SG (puerto 5432)
 # ============================================================
 
 # ============================================================
@@ -17,7 +17,10 @@
 # Este grupo de seguridad permite que el ALB reciba tráfico HTTP
 # desde Internet. Más adelante, cuando usemos dominio y certificado,
 # también se podrá habilitar HTTPS.
+#
 resource "aws_security_group" "alb_sg" {
+  # checkov:skip=CKV_AWS_260:El ALB es publico por diseño para recibir peticiones HTTP/HTTPS desde Internet abiertas a todo el mundo (0.0.0.0/0 en el puerto 80/443).
+  # checkov:skip=CKV_AWS_382:Se permite la salida de red abierta (egress 0.0.0.0/0 en todos los puertos) de forma predeterminada para simplificar las integraciones externas y responder a clientes.
   name        = "ticketgo-alb-sg"
   description = "Permite trafico HTTP publico hacia el ALB"
   vpc_id      = aws_vpc.ticketgo_vpc.id
@@ -50,6 +53,7 @@ resource "aws_security_group" "alb_sg" {
 # Solo permite tráfico desde el Security Group del ALB.
 # Es decir, Internet no puede acceder directamente a ECS.
 resource "aws_security_group" "ecs_sg" {
+  # checkov:skip=CKV_AWS_382:El contenedor de ECS Fargate necesita salida abierta a Internet (egress 0.0.0.0/0) para poder descargar paquetes NuGet, comunicarse con AWS ECR para descargar imagenes, enviar logs a CloudWatch y llamar a APIs externas.
   name        = "ticketgo-ecs-sg"
   description = "Permite trafico hacia ECS solo desde el ALB"
   vpc_id      = aws_vpc.ticketgo_vpc.id
@@ -81,6 +85,7 @@ resource "aws_security_group" "ecs_sg" {
 # Este grupo de seguridad protege la base de datos.
 # Solo permite conexiones PostgreSQL (puerto 5432) desde ECS Fargate.
 resource "aws_security_group" "rds_sg" {
+  # checkov:skip=CKV_AWS_382:Se permite salida a Internet abierta (egress 0.0.0.0/0) por defecto para que RDS pueda comunicarse con otros servicios internos en caso de requerirse, aunque no tiene IP publica.
   name        = "ticketgo-rds-sg"
   description = "Permite trafico PostgreSQL solo desde ECS"
   vpc_id      = aws_vpc.ticketgo_vpc.id

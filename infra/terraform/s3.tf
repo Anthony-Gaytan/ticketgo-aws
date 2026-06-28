@@ -7,7 +7,8 @@
 # Configuración:
 #   - Bucket privado (sin acceso público directo)
 #   - Acceso exclusivo via CloudFront OAC (Origin Access Control)
-#   - Versionado deshabilitado (para minimizar costos)
+#   - Versionado habilitado con políticas de ciclo de vida (Checkov)
+#   - Cifrado en reposo predeterminado habilitado (Checkov)
 #   - Bloqueo total de acceso público
 #
 # Costo: Free Tier incluye 5 GB de almacenamiento S3 Standard.
@@ -24,6 +25,58 @@ resource "aws_s3_bucket" "ticketgo_frontend" {
   tags = {
     Name = "ticketgo-frontend"
   }
+}
+
+# ============================================================
+# CIFRADO EN REPOSO PREDETERMINADO
+# ============================================================
+# Habilita el cifrado AES-256 administrado por S3 (SSE-S3).
+# Resuelve CKV_AWS_145 de forma gratuita.
+resource "aws_s3_bucket_server_side_encryption_configuration" "ticketgo_frontend_encryption" {
+  bucket = aws_s3_bucket.ticketgo_frontend.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# ============================================================
+# VERSIONADO DE ARCHIVOS
+# ============================================================
+# Habilita el versionado de objetos para recuperacion ante borrados.
+# Resuelve CKV_AWS_21.
+resource "aws_s3_bucket_versioning" "ticketgo_frontend_versioning" {
+  bucket = aws_s3_bucket.ticketgo_frontend.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# ============================================================
+# POLÍTICA DE CICLO DE VIDA (LIFECYCLE)
+# ============================================================
+# Controla el costo del versionado eliminando versiones antiguas
+# no actuales después de 14 días. Resuelve CKV2_AWS_61.
+resource "aws_s3_bucket_lifecycle_configuration" "ticketgo_frontend_lifecycle" {
+  bucket = aws_s3_bucket.ticketgo_frontend.id
+
+  rule {
+    id     = "cleanup-old-versions"
+    status = "Enabled"
+
+    noncurrent_version_expiration {
+      noncurrent_days = 14
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+
+  depends_on = [aws_s3_bucket_versioning.ticketgo_frontend_versioning]
 }
 
 # ============================================================

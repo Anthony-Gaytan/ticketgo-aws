@@ -42,7 +42,9 @@ resource "aws_vpc" "ticketgo_vpc" {
 # Esta subred estará en la primera zona de disponibilidad.
 # Se usará para componentes públicos como el Application Load Balancer.
 # map_public_ip_on_launch permite asignar IP pública a recursos que lo requieran.
+#
 resource "aws_subnet" "public_az1" {
+  # checkov:skip=CKV_AWS_130:Las subredes publicas necesitan asignar IP publica automaticamente por diseño, ya que en ellas se alojan recursos de cara a Internet como el ALB.
   vpc_id                  = aws_vpc.ticketgo_vpc.id
   cidr_block              = "10.0.1.0/24"
   availability_zone       = data.aws_availability_zones.available.names[0]
@@ -59,6 +61,7 @@ resource "aws_subnet" "public_az1" {
 # Segunda subred pública ubicada en otra zona de disponibilidad.
 # Permite que el balanceador tenga alta disponibilidad entre AZ-1 y AZ-2.
 resource "aws_subnet" "public_az2" {
+  # checkov:skip=CKV_AWS_130:Las subredes publicas necesitan asignar IP publica automaticamente por diseño, ya que en ellas se alojan recursos de cara a Internet como el ALB.
   vpc_id                  = aws_vpc.ticketgo_vpc.id
   cidr_block              = "10.0.2.0/24"
   availability_zone       = data.aws_availability_zones.available.names[1]
@@ -183,4 +186,16 @@ resource "aws_subnet" "private_data_az2" {
   tags = {
     Name = "ticketgo-private-data-az2"
   }
+}
+
+# ============================================================
+# SECURITY GROUP PREDETERMINADO DE LA VPC (DEFAULT SG)
+# ============================================================
+# Checkov exige que el Security Group predeterminado de toda VPC
+# restrinja todo tráfico entrante y saliente.
+# Adoptar este recurso de forma "vacía" deshabilita todas las reglas
+# implícitas de entrada/salida que AWS asocia por defecto.
+resource "aws_default_security_group" "default" {
+  vpc_id = aws_vpc.ticketgo_vpc.id
+  # Dejar sin ingress/egress blocks para bloquear todo el tráfico.
 }

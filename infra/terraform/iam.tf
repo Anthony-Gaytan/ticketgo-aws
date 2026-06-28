@@ -111,7 +111,7 @@ resource "aws_iam_role_policy" "lambda_sqs_policy" {
           "ses:SendEmail",
           "ses:SendRawEmail"
         ]
-        Resource = "*"
+        Resource = aws_ses_email_identity.ticketgo_sender.arn
       }
     ]
   })

@@ -147,3 +147,19 @@ variable "ses_email_identity" {
   type        = string
   default     = ""
 }
+
+# ------------------------------------------------------------
+# PROTECCIÓN DE BORRADO - Checkov (rds.tf / alb.tf)
+# ------------------------------------------------------------
+
+variable "rds_deletion_protection" {
+  description = "Habilitar proteccion contra eliminacion de la base de datos RDS"
+  type        = bool
+  default     = false
+}
+
+variable "alb_deletion_protection" {
+  description = "Habilitar proteccion contra eliminacion del Application Load Balancer"
+  type        = bool
+  default     = false
+}

@@ -49,10 +49,11 @@ resource "aws_cloudfront_distribution" "ticketgo_cdn" {
 
   # Comportamiento por defecto para archivos estáticos
   default_cache_behavior {
-    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
-    cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "S3-ticketgo-frontend"
-    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods            = ["GET", "HEAD", "OPTIONS"]
+    cached_methods             = ["GET", "HEAD"]
+    target_origin_id           = "S3-ticketgo-frontend"
+    viewer_protocol_policy     = "redirect-to-https"
+    response_headers_policy_id = "67fcdade-6651-4c11-17d0-fd8522635b75" # SecurityHeadersPolicy (AWS Managed)
 
     forwarded_values {
       query_string = false
@@ -91,6 +92,7 @@ resource "aws_cloudfront_distribution" "ticketgo_cdn" {
   # Certificado SSL por defecto de CloudFront
   viewer_certificate {
     cloudfront_default_certificate = true
+    minimum_protocol_version       = "TLSv1.2_2021"
   }
 
   tags = {

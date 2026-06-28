@@ -18,6 +18,10 @@
 # hacia los servicios internos de la aplicación.
 # Se coloca en las dos subredes públicas para alta disponibilidad.
 resource "aws_lb" "ticketgo_alb" {
+  # checkov:skip=CKV_AWS_150:Para un ambiente de demo y desarrollo rapido, la proteccion de borrado del ALB esta desactivada para poder destruir y recrear la infraestructura de forma automatica y sin bloqueos.
+  # checkov:skip=CKV_AWS_91:Para un ambiente de demo, el registro de acceso del ALB (Access Logging) esta desactivado para evitar costos y almacenamiento innecesario en S3.
+  # checkov:skip=CKV2_AWS_28:En un ambiente de demo, el ALB esta protegido indirectamente por CloudFront (que tiene WAF asociado). Crear un WAF regional adicional para el ALB no es necesario y evita costos adicionales.
+  # checkov:skip=CKV2_AWS_20:Para un ambiente de demo sin dominio propio ni certificado SSL en el ALB, este recibe peticiones directas en HTTP. La seguridad SSL se gestiona en la capa de CloudFront para la web, y no se requiere HTTPS directo en el ALB.
   name                       = "ticketgo-alb"
   internal                   = false
   load_balancer_type         = "application"
@@ -72,6 +76,8 @@ resource "aws_lb_target_group" "ticketgo_tg" {
 # El Listener escucha peticiones HTTP en el puerto 80.
 # Cuando recibe tráfico, lo reenvía al Target Group del backend.
 resource "aws_lb_listener" "http_listener" {
+  # checkov:skip=CKV_AWS_2:Para un ambiente de demo sin certificado ACM SSL asociado, el ALB escucha en protocolo HTTP para permitir conexion directa a la API.
+  # checkov:skip=CKV_AWS_103:Para un ambiente de demo, el listener utiliza HTTP (puerto 80), por lo que no aplica configuracion de TLS/SSL.
   load_balancer_arn = aws_lb.ticketgo_alb.arn
   port              = 80
   protocol          = "HTTP"

@@ -76,32 +76,32 @@ resource "aws_security_group" "ecs_sg" {
 }
 
 # ============================================================
-# SECURITY GROUP DE RDS POSTGRESQL (Fase 4)
+# SECURITY GROUP DE RDS POSTGRESQL
 # ============================================================
 # Este grupo de seguridad protege la base de datos.
 # Solo permite conexiones PostgreSQL (puerto 5432) desde ECS Fargate.
-# Se creará en la Fase 4 cuando se despliegue RDS.
-# resource "aws_security_group" "rds_sg" {
-#   name        = "ticketgo-rds-sg"
-#   description = "Permite trafico PostgreSQL solo desde ECS"
-#   vpc_id      = aws_vpc.ticketgo_vpc.id
-#
-#   ingress {
-#     description     = "PostgreSQL desde ECS"
-#     from_port       = 5432
-#     to_port         = 5432
-#     protocol        = "tcp"
-#     security_groups = [aws_security_group.ecs_sg.id]
-#   }
-#
-#   egress {
-#     from_port   = 0
-#     to_port     = 0
-#     protocol    = "-1"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-#
-#   tags = {
-#     Name = "ticketgo-rds-sg"
-#   }
-# }
+resource "aws_security_group" "rds_sg" {
+  name        = "ticketgo-rds-sg"
+  description = "Permite trafico PostgreSQL solo desde ECS"
+  vpc_id      = aws_vpc.ticketgo_vpc.id
+
+  ingress {
+    description     = "PostgreSQL desde ECS"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs_sg.id]
+  }
+
+  egress {
+    description = "Salida permitida hacia cualquier destino"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "ticketgo-rds-sg"
+  }
+}

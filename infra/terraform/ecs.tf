@@ -66,6 +66,17 @@ resource "aws_ecs_task_definition" "ticketgo_api_task" {
         }
       ]
 
+      secrets = [
+        {
+          name      = "ConnectionStrings__DefaultConnection"
+          valueFrom = aws_secretsmanager_secret.ticketgo_db_credentials.arn
+        },
+        {
+          name      = "Jwt__Key"
+          valueFrom = aws_secretsmanager_secret.ticketgo_jwt_secret.arn
+        }
+      ]
+
       logConfiguration = {
         logDriver = "awslogs"
         options = {

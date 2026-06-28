@@ -16,6 +16,12 @@ variable "aws_region" {
   default     = "us-east-2"
 }
 
+variable "aws_profile" {
+  description = "Perfil de AWS CLI a utilizar para la autenticación"
+  type        = string
+  default     = "anthony-admi"
+}
+
 variable "aws_account_id" {
   description = "ID de la cuenta AWS"
   type        = string

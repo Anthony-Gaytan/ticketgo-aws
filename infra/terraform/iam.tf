@@ -104,7 +104,43 @@ resource "aws_iam_role_policy" "lambda_sqs_policy" {
           "sqs:GetQueueAttributes"
         ]
         Resource = aws_sqs_queue.ticketgo_notifications.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ses:SendEmail",
+          "ses:SendRawEmail"
+        ]
+        Resource = "*"
       }
     ]
   })
 }
+
+# ============================================================
+# POLÍTICA PARA ECS - ACCESO A SECRETS MANAGER
+# ============================================================
+# Permite que ECS Task Execution Role lea los secretos
+# de base de datos y JWT almacenados en Secrets Manager.
+# Solo accede a los secretos específicos del proyecto.
+resource "aws_iam_role_policy" "ecs_secrets_policy" {
+  name = "ticketgo-ecs-secrets-policy"
+  role = aws_iam_role.ecs_task_execution_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = [
+          aws_secretsmanager_secret.ticketgo_db_credentials.arn,
+          aws_secretsmanager_secret.ticketgo_jwt_secret.arn
+        ]
+      }
+    ]
+  })
+}
+

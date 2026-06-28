@@ -38,3 +38,54 @@ resource "aws_cloudwatch_log_group" "ticketgo_lambda_logs" {
     Name = "ticketgo-lambda-logs"
   }
 }
+
+# ============================================================
+# CLOUDWATCH ALARMS - MONITOREO OPERACIONAL
+# ============================================================
+# Alarmas que alertan sobre problemas operacionales críticos.
+# Sin SNS Topic asociado por ahora; las alarmas son visibles
+# en la consola de CloudWatch y pueden integrarse con SNS
+# en fases futuras para enviar notificaciones.
+
+# Alarma: mensajes en la DLQ (notificaciones fallidas)
+resource "aws_cloudwatch_metric_alarm" "dlq_messages" {
+  alarm_name          = "ticketgo-dlq-has-messages"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "ApproximateNumberOfMessagesVisible"
+  namespace           = "AWS/SQS"
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 0
+  alarm_description   = "La DLQ tiene mensajes no procesados - revisar errores en Lambda"
+
+  dimensions = {
+    QueueName = aws_sqs_queue.ticketgo_notifications_dlq.name
+  }
+
+  tags = {
+    Name = "ticketgo-dlq-alarm"
+  }
+}
+
+# Alarma: errores en la función Lambda
+resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
+  alarm_name          = "ticketgo-lambda-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 0
+  alarm_description   = "La funcion Lambda de notificaciones tiene errores de ejecucion"
+
+  dimensions = {
+    FunctionName = aws_lambda_function.ticketgo_notification_processor.function_name
+  }
+
+  tags = {
+    Name = "ticketgo-lambda-errors-alarm"
+  }
+}
+

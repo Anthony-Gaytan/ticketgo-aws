@@ -22,6 +22,7 @@ resource "aws_lb" "ticketgo_alb" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb_sg.id]
+  drop_invalid_header_fields = true
 
   subnets = [
     aws_subnet.public_az1.id,

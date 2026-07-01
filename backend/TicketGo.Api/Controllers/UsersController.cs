@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,7 @@ namespace TicketGo.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin")]
+[Authorize]
 public class UsersController : ControllerBase
 {
     private readonly TicketGoDbContext _context;
@@ -20,6 +21,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetAll()
     {
         var users = await _context.Users
@@ -28,6 +30,7 @@ public class UsersController : ControllerBase
                 Id = u.Id,
                 FullName = u.FullName,
                 Email = u.Email,
+                Role = u.Role,
                 CreatedAt = u.CreatedAt
             })
             .ToListAsync();
@@ -36,6 +39,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetById(Guid id)
     {
         var user = await _context.Users
@@ -45,6 +49,7 @@ public class UsersController : ControllerBase
                 Id = u.Id,
                 FullName = u.FullName,
                 Email = u.Email,
+                Role = u.Role,
                 CreatedAt = u.CreatedAt
             })
             .FirstOrDefaultAsync();
@@ -56,6 +61,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create([FromBody] CreateUserDto request)
     {
         if (await _context.Users.AnyAsync(u => u.Email == request.Email))
@@ -76,9 +82,32 @@ public class UsersController : ControllerBase
             Id = user.Id,
             FullName = user.FullName,
             Email = user.Email,
+            Role = user.Role,
             CreatedAt = user.CreatedAt
         };
 
         return CreatedAtAction(nameof(GetById), new { id = user.Id }, response);
+    }
+
+    [HttpGet("me")]
+    public IActionResult GetMe()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var nameClaim = User.FindFirst(ClaimTypes.Name)?.Value;
+        var emailClaim = User.FindFirst(ClaimTypes.Email)?.Value;
+        var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (string.IsNullOrWhiteSpace(userIdClaim))
+            return Unauthorized("Usuario no autenticado o token inválido.");
+
+        var response = new UserMeResponseDto
+        {
+            Id = Guid.Parse(userIdClaim),
+            FullName = nameClaim ?? string.Empty,
+            Email = emailClaim ?? string.Empty,
+            Role = roleClaim ?? string.Empty
+        };
+
+        return Ok(response);
     }
 }

@@ -33,6 +33,25 @@ builder.Services.AddDbContext<TicketGoDbContext>(options =>
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
+// CORS Configuration
+var allowedOrigins = builder.Configuration["FRONTEND_ALLOWED_ORIGINS"] 
+    ?? Environment.GetEnvironmentVariable("FRONTEND_ALLOWED_ORIGINS");
+
+var originsList = string.IsNullOrWhiteSpace(allowedOrigins)
+    ? new[] { "http://localhost:5173", "http://localhost:3000" }
+    : allowedOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendCorsPolicy", policy =>
+    {
+        policy.WithOrigins(originsList)
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
 // Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -121,6 +140,8 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionMiddleware>();
+
+app.UseCors("FrontendCorsPolicy");
 
 // Swagger
 if (app.Environment.IsDevelopment())

@@ -101,6 +101,7 @@ resource "aws_ecs_task_definition" "ticketgo_api_task" {
 # en subredes públicas con IP pública.
 # El servicio se conecta al ALB a través del Target Group.
 resource "aws_ecs_service" "ticketgo_api_service" {
+  # checkov:skip=CKV_AWS_333:Para este ambiente de demo y desarrollo, la tarea ECS se despliega en subredes publicas con IP publica asignada para evitar el costo mensual de NAT Gateways (~$32/mes) que serian necesarios para acceder a Internet desde subredes privadas.
   name            = "ticketgo-api-service"
   cluster         = aws_ecs_cluster.ticketgo_cluster.id
   task_definition = aws_ecs_task_definition.ticketgo_api_task.arn

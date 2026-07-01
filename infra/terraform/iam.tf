@@ -153,3 +153,33 @@ resource "aws_iam_role_policy" "ecs_secrets_policy" {
   })
 }
 
+# ============================================================
+# IAM ROLE PARA MONITOREO MEJORADO DE RDS
+# ============================================================
+# Permite que RDS envíe métricas de monitoreo mejorado a CloudWatch.
+resource "aws_iam_role" "rds_enhanced_monitoring" {
+  name = "ticketgo-rds-enhanced-monitoring-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "monitoring.rds.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = {
+    Name = "ticketgo-rds-enhanced-monitoring-role"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "rds_enhanced_monitoring" {
+  role       = aws_iam_role.rds_enhanced_monitoring.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
+}
+

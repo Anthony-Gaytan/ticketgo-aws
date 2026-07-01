@@ -199,3 +199,79 @@ resource "aws_default_security_group" "default" {
   vpc_id = aws_vpc.ticketgo_vpc.id
   # Dejar sin ingress/egress blocks para bloquear todo el tráfico.
 }
+
+# ============================================================
+# CLOUDWATCH LOG GROUP PARA VPC FLOW LOGS
+# ============================================================
+# Registra todo el tráfico de red de la VPC para auditoría y seguridad.
+resource "aws_cloudwatch_log_group" "vpc_flow_log_group" {
+  # checkov:skip=CKV_AWS_158:Para un ambiente de demo, el cifrado con KMS de los Log Groups de CloudWatch esta desactivado para evitar costos innecesarios de KMS ($1/mes por clave mas costos de llamadas).
+  # checkov:skip=CKV_AWS_338:Para un ambiente de demo, la retencion de logs es de 7 dias (definido por var.log_retention_days) para optimizar costos de almacenamiento en CloudWatch, lo cual es suficiente para pruebas y desarrollo.
+  name              = "/aws/vpc-flow-logs/ticketgo"
+  retention_in_days = var.log_retention_days
+
+  tags = {
+    Name = "ticketgo-vpc-flow-logs"
+  }
+}
+
+# ============================================================
+# IAM ROLE Y POLÍTICA PARA VPC FLOW LOGS
+# ============================================================
+# Otorga permisos al servicio Flow Logs para crear streams y
+# enviar registros de logs hacia el Log Group de CloudWatch.
+resource "aws_iam_role" "vpc_flow_log_role" {
+  name = "ticketgo-vpc-flow-log-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "vpc-flow-logs.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = {
+    Name = "ticketgo-vpc-flow-log-role"
+  }
+}
+
+resource "aws_iam_role_policy" "vpc_flow_log_policy" {
+  name = "ticketgo-vpc-flow-log-policy"
+  role = aws_iam_role.vpc_flow_log_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "${aws_cloudwatch_log_group.vpc_flow_log_group.arn}:*"
+      }
+    ]
+  })
+}
+
+# ============================================================
+# VPC FLOW LOG RESOURCE
+# ============================================================
+# Habilita el registro de flujos IP aceptados/rechazados en la VPC.
+# Resuelve CKV2_AWS_11.
+resource "aws_flow_log" "ticketgo_vpc_flow_log" {
+  iam_role_arn    = aws_iam_role.vpc_flow_log_role.arn
+  log_destination = aws_cloudwatch_log_group.vpc_flow_log_group.arn
+  traffic_type    = "ALL"
+  vpc_id          = aws_vpc.ticketgo_vpc.id
+
+  tags = {
+    Name = "ticketgo-vpc-flow-log"
+  }
+}

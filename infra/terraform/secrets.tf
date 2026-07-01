@@ -21,9 +21,11 @@
 # Almacena la connection string de PostgreSQL que ECS
 # inyectará como variable de entorno al contenedor.
 resource "aws_secretsmanager_secret" "ticketgo_db_credentials" {
+  # checkov:skip=CKV2_AWS_57:Para un ambiente de demo, la rotacion automatica de secretos no esta habilitada para evitar la complejidad y costos asociados de desplegar Lambdas de rotacion y dependencias de red.
   name                    = "ticketgo/db-credentials"
   description             = "Connection string de RDS PostgreSQL para la API"
   recovery_window_in_days = 0
+  kms_key_id              = aws_kms_key.ticketgo_key.arn
 
   tags = {
     Name = "ticketgo-db-credentials"
@@ -36,9 +38,11 @@ resource "aws_secretsmanager_secret" "ticketgo_db_credentials" {
 # Almacena la clave secreta utilizada para firmar y validar
 # los tokens JWT de autenticación.
 resource "aws_secretsmanager_secret" "ticketgo_jwt_secret" {
+  # checkov:skip=CKV2_AWS_57:Para un ambiente de demo, la rotacion automatica de secretos no esta habilitada para evitar la complejidad y costos asociados de desplegar Lambdas de rotacion y dependencias de red.
   name                    = "ticketgo/jwt-secret"
   description             = "Clave secreta para firma de tokens JWT"
   recovery_window_in_days = 0
+  kms_key_id              = aws_kms_key.ticketgo_key.arn
 
   tags = {
     Name = "ticketgo-jwt-secret"

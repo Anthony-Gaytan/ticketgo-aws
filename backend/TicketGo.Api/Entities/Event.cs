@@ -39,4 +39,5 @@ public class Event
     public ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
     public ICollection<EventTicketType> TicketTypes { get; set; } = new List<EventTicketType>();
 
+    public string? ImageUrl { get; set; }
 }

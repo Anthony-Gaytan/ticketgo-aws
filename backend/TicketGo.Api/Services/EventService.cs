@@ -53,7 +53,8 @@ public class EventService : IEventService
             EndDate = request.EndDate,
             Capacity = request.Capacity,
             OrganizerId = organizerId,
-            Status = "Draft",
+            Status = !string.IsNullOrWhiteSpace(request.Status) ? request.Status : "Draft",
+            ImageUrl = request.ImageUrl,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -88,6 +89,11 @@ public class EventService : IEventService
         existingEvent.StartDate = request.StartDate;
         existingEvent.EndDate = request.EndDate;
         existingEvent.Capacity = request.Capacity;
+        existingEvent.ImageUrl = request.ImageUrl;
+        if (!string.IsNullOrWhiteSpace(request.Status))
+        {
+            existingEvent.Status = request.Status;
+        }
         existingEvent.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
@@ -170,6 +176,7 @@ public class EventService : IEventService
             TicketsSold = e.TicketsSold,
             Status = e.Status,
             OrganizerId = e.OrganizerId,
+            ImageUrl = e.ImageUrl,
             CreatedAt = e.CreatedAt
         };
     }

@@ -29,4 +29,6 @@ public class EventResponseDto
     public Guid OrganizerId { get; set; }
 
     public DateTime CreatedAt { get; set; }
+
+    public string? ImageUrl { get; set; }
 }

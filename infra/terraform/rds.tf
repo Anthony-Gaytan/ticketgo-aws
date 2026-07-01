@@ -41,6 +41,41 @@ resource "aws_db_subnet_group" "ticketgo_db_subnet_group" {
 }
 
 # ============================================================
+# DB PARAMETER GROUP
+# ============================================================
+# Define configuraciones avanzadas para PostgreSQL, habilitando
+# logs de consultas para auditoria y debugging. Resuelve CKV2_AWS_30.
+resource "aws_db_parameter_group" "ticketgo_db_pg" {
+  name   = "ticketgo-db-pg"
+  family = "postgres16"
+
+  parameter {
+    name  = "log_connections"
+    value = "1"
+  }
+
+  parameter {
+    name  = "log_disconnections"
+    value = "1"
+  }
+
+  parameter {
+    name  = "log_statement"
+    value = "all"
+  }
+
+  parameter {
+    name  = "log_min_duration_statement"
+    value = "1000"
+  }
+
+  parameter {
+    name  = "rds.force_ssl"
+    value = "1"
+  }
+}
+
+# ============================================================
 # INSTANCIA RDS POSTGRESQL
 # ============================================================
 # Base de datos PostgreSQL 16 en subredes privadas.
@@ -48,6 +83,7 @@ resource "aws_db_subnet_group" "ticketgo_db_subnet_group" {
 # y almacenada en Secrets Manager (manage_master_user_password).
 # No tiene acceso público ni IP pública.
 resource "aws_db_instance" "ticketgo_db" {
+  # checkov:skip=CKV_AWS_157:Multi-AZ esta desactivado por defecto en la variable rds_multi_az para evitar duplicar costos en el ambiente de demo.
   identifier     = "ticketgo-db"
   engine         = "postgres"
   engine_version = "16"
@@ -69,10 +105,26 @@ resource "aws_db_instance" "ticketgo_db" {
   multi_az               = var.rds_multi_az
   publicly_accessible    = false
 
-  auto_minor_version_upgrade   = true
-  copy_tags_to_snapshot        = true
-  deletion_protection          = var.rds_deletion_protection
-  performance_insights_enabled = true
+  auto_minor_version_upgrade = true
+  copy_tags_to_snapshot      = true
+  deletion_protection        = var.rds_deletion_protection
+
+  # Autenticación IAM habilitada (CKV_AWS_161)
+  iam_database_authentication_enabled = true
+
+  # Logs de base de datos a CloudWatch (CKV_AWS_129)
+  enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
+
+  # Performance Insights y cifrado KMS (CKV_AWS_354)
+  performance_insights_enabled    = true
+  performance_insights_kms_key_id = aws_kms_key.ticketgo_key.arn
+
+  # Monitoreo Mejorado (Enhanced Monitoring) (CKV_AWS_118)
+  monitoring_interval = 60
+  monitoring_role_arn = aws_iam_role.rds_enhanced_monitoring.arn
+
+  # Parameter Group para Query Logging (CKV2_AWS_30)
+  parameter_group_name = aws_db_parameter_group.ticketgo_db_pg.name
 
   backup_retention_period = 7
   skip_final_snapshot     = true

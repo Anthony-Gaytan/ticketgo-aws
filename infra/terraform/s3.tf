@@ -20,7 +20,14 @@
 # Bucket privado que almacena los archivos compilados del
 # frontend React (HTML, CSS, JS, imágenes).
 resource "aws_s3_bucket" "ticketgo_frontend" {
+  # checkov:skip=CKV_AWS_144:Para un ambiente de demo, no es necesaria la replicacion de datos en otra region de AWS, lo que ahorra costos de transferencia y almacenamiento.
+  # checkov:skip=CKV2_AWS_62:El bucket solo almacena el frontend estatico y no se realizan acciones reactivas ante la subida de objetos, por lo que no requiere notificaciones de eventos.
   bucket = "ticketgo-frontend-${var.aws_account_id}"
+
+  logging {
+    target_bucket = aws_s3_bucket.ticketgo_s3_logging.id
+    target_prefix = "log/"
+  }
 
   tags = {
     Name = "ticketgo-frontend"
@@ -30,14 +37,15 @@ resource "aws_s3_bucket" "ticketgo_frontend" {
 # ============================================================
 # CIFRADO EN REPOSO PREDETERMINADO
 # ============================================================
-# Habilita el cifrado AES-256 administrado por S3 (SSE-S3).
-# Resuelve CKV_AWS_145 de forma gratuita.
+# Habilita el cifrado SSE-KMS administrado con clave KMS personalizada (CMK).
+# Resuelve CKV_AWS_145.
 resource "aws_s3_bucket_server_side_encryption_configuration" "ticketgo_frontend_encryption" {
   bucket = aws_s3_bucket.ticketgo_frontend.id
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      kms_master_key_id = aws_kms_key.ticketgo_key.arn
+      sse_algorithm     = "aws:kms"
     }
   }
 }
@@ -122,4 +130,74 @@ resource "aws_s3_bucket_policy" "ticketgo_frontend" {
   })
 
   depends_on = [aws_s3_bucket_public_access_block.ticketgo_frontend]
+}
+
+# ============================================================
+# S3 BUCKET - REGISTROS DE ACCESO (LOGGING)
+# ============================================================
+# Almacena los logs de acceso del bucket del frontend.
+resource "aws_s3_bucket" "ticketgo_s3_logging" {
+  # checkov:skip=CKV_AWS_18:Este es el bucket de logs de S3, no requiere tener habilitado el registro de accesos sobre si mismo.
+  # checkov:skip=CKV_AWS_144:Para un ambiente de demo, no se requiere replicacion region cruzada del bucket de logs.
+  # checkov:skip=CKV2_AWS_62:El bucket de logs no requiere notificaciones de eventos.
+  bucket = "ticketgo-s3-logs-${var.aws_account_id}"
+
+  tags = {
+    Name = "ticketgo-s3-logs"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "ticketgo_s3_logging" {
+  bucket = aws_s3_bucket.ticketgo_s3_logging.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "ticketgo_s3_logging_encryption" {
+  bucket = aws_s3_bucket.ticketgo_s3_logging.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      kms_master_key_id = aws_kms_key.ticketgo_key.arn
+      sse_algorithm     = "aws:kms"
+    }
+  }
+}
+
+resource "aws_s3_bucket_versioning" "ticketgo_s3_logging_versioning" {
+  bucket = aws_s3_bucket.ticketgo_s3_logging.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# ============================================================
+# LOGS S3 LIFECYCLE CONFIGURATION
+# ============================================================
+# Elimina los logs antiguos después de 30 días para controlar costos.
+resource "aws_s3_bucket_lifecycle_configuration" "ticketgo_s3_logging_lifecycle" {
+  bucket = aws_s3_bucket.ticketgo_s3_logging.id
+
+  rule {
+    id     = "cleanup-old-logs"
+    status = "Enabled"
+
+    expiration {
+      days = 30
+    }
+
+    noncurrent_version_expiration {
+      noncurrent_days = 7
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+
+  depends_on = [aws_s3_bucket_versioning.ticketgo_s3_logging_versioning]
 }

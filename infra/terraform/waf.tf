@@ -19,6 +19,7 @@
 # Protege el CDN con rate limiting y reglas administradas
 # por AWS contra los ataques más comunes del OWASP Top 10.
 resource "aws_wafv2_web_acl" "ticketgo_waf" {
+  # checkov:skip=CKV2_AWS_31:Para un ambiente de demo, el registro de logs detallado de WAFv2 (Logging Configuration) esta desactivado para evitar altos costos de transferencia y almacenamiento de logs de peticiones HTTP en CloudWatch.
   provider = aws.us_east_1
   name     = "ticketgo-waf"
   scope    = "CLOUDFRONT"
@@ -70,6 +71,29 @@ resource "aws_wafv2_web_acl" "ticketgo_waf" {
       sampled_requests_enabled   = true
       cloudwatch_metrics_enabled = true
       metric_name                = "ticketgo-aws-common-rules"
+    }
+  }
+
+  # AWS Managed Rules - Known bad inputs (Log4j vulnerability protection, etc.)
+  rule {
+    name     = "aws-managed-known-bad-inputs"
+    priority = 3
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        vendor_name = "AWS"
+        name        = "AWSManagedRulesKnownBadInputsRuleSet"
+      }
+    }
+
+    visibility_config {
+      sampled_requests_enabled   = true
+      cloudwatch_metrics_enabled = true
+      metric_name                = "ticketgo-aws-known-bad-inputs"
     }
   }
 

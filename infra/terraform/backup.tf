@@ -52,7 +52,8 @@ resource "aws_iam_role_policy_attachment" "backup_policy" {
 # ============================================================
 # Almacén seguro donde se guardan los puntos de recuperación.
 resource "aws_backup_vault" "ticketgo_vault" {
-  name = "ticketgo-backup-vault"
+  name        = "ticketgo-backup-vault"
+  kms_key_arn = aws_kms_key.ticketgo_key.arn
 
   tags = {
     Name = "ticketgo-backup-vault"

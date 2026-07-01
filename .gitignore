@@ -23,3 +23,6 @@ override.tf.json
 
 # Variables
 .env
+
+# Checkov Reports
+checkov_report_final_*.txt

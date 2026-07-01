@@ -51,6 +51,7 @@ resource "aws_ecs_task_definition" "ticketgo_api_task" {
   cpu                      = var.ecs_cpu
   memory                   = var.ecs_memory
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
     {
@@ -74,6 +75,17 @@ resource "aws_ecs_task_definition" "ticketgo_api_task" {
         {
           name      = "Jwt__Key"
           valueFrom = aws_secretsmanager_secret.ticketgo_jwt_secret.arn
+        }
+      ]
+
+      environment = [
+        {
+          name  = "AWS_REGION"
+          value = var.aws_region
+        },
+        {
+          name  = "AWS_SQS_QUEUE_URL"
+          value = aws_sqs_queue.ticketgo_notifications.url
         }
       ]
 

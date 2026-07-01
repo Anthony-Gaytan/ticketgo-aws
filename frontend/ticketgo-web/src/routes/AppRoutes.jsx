@@ -10,6 +10,7 @@ import { Register } from '../pages/Register';
 import { MyTickets } from '../pages/MyTickets';
 import { EventDetail } from '../pages/EventDetail';
 import { AdminDashboard } from '../pages/AdminDashboard';
+import { Profile } from '../pages/Profile';
 
 export const AppRoutes = () => {
   return (
@@ -28,6 +29,7 @@ export const AppRoutes = () => {
         {/* Protected Client Routes */}
         <Route element={<ProtectedRoute allowedRoles={['Customer', 'Organizer', 'Admin']} />}>
           <Route path="/my-tickets" element={<MyTickets />} />
+          <Route path="/profile" element={<Profile />} />
         </Route>
 
         {/* Protected Admin Routes */}

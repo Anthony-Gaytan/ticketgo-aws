@@ -53,8 +53,19 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const refreshProfile = async () => {
+    try {
+      const userData = await apiClient.get('/api/Users/me');
+      setUser(userData);
+      return { success: true, user: userData };
+    } catch (error) {
+      console.error('Failed to refresh profile', error);
+      return { success: false, error: error.message };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshProfile, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

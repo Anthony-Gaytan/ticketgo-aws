@@ -12,8 +12,8 @@ export const Home = () => {
     const fetchEvents = async () => {
       try {
         const data = await apiClient.get('/api/Events');
-        // Filter out deleted events if any
-        setEvents(data ? data.filter(e => !e.isDeleted) : []);
+        // Filter out deleted events and only show published events
+        setEvents(data ? data.filter(e => !e.isDeleted && e.status === 'Published') : []);
       } catch (error) {
         console.error('Error fetching events:', error);
       } finally {

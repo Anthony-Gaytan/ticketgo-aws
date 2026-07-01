@@ -14,7 +14,12 @@ import {
   Percent, 
   PlusCircle, 
   CheckCircle2,
-  Tag
+  Tag,
+  Edit,
+  Play,
+  XCircle,
+  Clock,
+  Archive
 } from 'lucide-react';
 import { apiClient } from '../api/apiClient';
 import { useAuth } from '../hooks/useAuth';
@@ -39,8 +44,12 @@ export const AdminDashboard = () => {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedEventForDetail, setSelectedEventForDetail] = useState(null);
   const [selectedEventTicketTypes, setSelectedEventTicketTypes] = useState([]);
+  
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingEventId, setEditingEventId] = useState(null);
 
-  // Form states for creating event
+  // Form states (kept as strings for pure UX input handling without prepended zeros)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -50,13 +59,13 @@ export const AdminDashboard = () => {
     city: '',
     startDate: '',
     endDate: '',
-    capacity: 100,
+    capacity: '100',
     status: 'Draft'
   });
   
   const [imagePreview, setImagePreview] = useState(null);
   const [formTicketTypes, setFormTicketTypes] = useState([
-    { name: 'General', price: 50.00, stock: 100 }
+    { name: 'General', price: '50.00', stock: '100' }
   ]);
   const [formError, setFormError] = useState('');
   const [formSubmitting, setFormSubmitting] = useState(false);
@@ -68,7 +77,6 @@ export const AdminDashboard = () => {
     setGlobalError('');
     setForbiddenError({ users: false, orders: false, tickets: false });
 
-    // Events are public, anyone (Admin/Organizer) can load them
     try {
       const eventsData = await apiClient.get('/api/Events');
       setEventsList(eventsData || []);
@@ -77,12 +85,11 @@ export const AdminDashboard = () => {
       setGlobalError('Error al conectar con la API de eventos.');
     }
 
-    // Admin-only endpoints. If Organizer, catch 403/401 and set local forbidden status
     try {
       const usersData = await apiClient.get('/api/Users');
       setUsersList(usersData || []);
     } catch (err) {
-      console.warn('Users access denied (typical for Organizer):', err);
+      console.warn('Users access denied:', err);
       setForbiddenError(prev => ({ ...prev, users: true }));
     }
 
@@ -90,7 +97,7 @@ export const AdminDashboard = () => {
       const ordersData = await apiClient.get('/api/Orders');
       setOrdersList(ordersData || []);
     } catch (err) {
-      console.warn('Orders access denied (typical for Organizer):', err);
+      console.warn('Orders access denied:', err);
       setForbiddenError(prev => ({ ...prev, orders: true }));
     }
 
@@ -98,7 +105,7 @@ export const AdminDashboard = () => {
       const ticketsData = await apiClient.get('/api/Tickets');
       setTicketsList(ticketsData || []);
     } catch (err) {
-      console.warn('Tickets access denied (typical for Organizer):', err);
+      console.warn('Tickets access denied:', err);
       setForbiddenError(prev => ({ ...prev, tickets: true }));
     }
 
@@ -108,6 +115,29 @@ export const AdminDashboard = () => {
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  // Helper formatting states
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case 'Published': return 'badge-success';
+      case 'PendingReview': return 'badge-warning';
+      case 'OnHold': return 'badge-info';
+      case 'Rejected':
+      case 'Cancelled': return 'badge-danger';
+      default: return 'badge-secondary'; // Draft
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'Published': return 'Publicado';
+      case 'PendingReview': return 'En Revisión';
+      case 'OnHold': return 'En Espera';
+      case 'Rejected': return 'Rechazado';
+      case 'Cancelled': return 'Cancelado';
+      default: return 'Borrador';
+    }
+  };
 
   // FileReader local preview handler
   const handleImageChange = (e) => {
@@ -123,7 +153,7 @@ export const AdminDashboard = () => {
 
   // Dynamic ticket type actions
   const addFormTicketType = () => {
-    setFormTicketTypes([...formTicketTypes, { name: '', price: 0.00, stock: 0 }]);
+    setFormTicketTypes([...formTicketTypes, { name: '', price: '', stock: '' }]);
   };
 
   const removeFormTicketType = (index) => {
@@ -136,7 +166,7 @@ export const AdminDashboard = () => {
       if (i === index) {
         return {
           ...item,
-          [field]: field === 'price' || field === 'stock' ? parseFloat(value) || 0 : value
+          [field]: value
         };
       }
       return item;
@@ -152,56 +182,255 @@ export const AdminDashboard = () => {
       const typesData = await apiClient.get(`/api/EventTicketTypes/event/${eventItem.id}`);
       setSelectedEventTicketTypes(typesData || []);
     } catch (err) {
-      console.error('Error fetching ticket types for detail view:', err);
+      console.error('Error fetching ticket types:', err);
     }
   };
 
-  // Submit new event creation
-  const handleCreateEvent = async (e) => {
+  // Admin action: publish/approve event
+  const handlePublishEvent = async (eventId) => {
+    if (!window.confirm('¿Estás seguro de que deseas APROBAR y PUBLICAR este evento?')) return;
+    try {
+      await apiClient.patch(`/api/Events/${eventId}/publish`);
+      loadDashboardData();
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Error al publicar el evento.');
+    }
+  };
+
+  // Admin action: reject event
+  const handleRejectEvent = async (eventItem) => {
+    if (!window.confirm('¿Estás seguro de que deseas RECHAZAR este evento?')) return;
+    try {
+      await apiClient.put(`/api/Events/${eventItem.id}`, {
+        title: eventItem.title,
+        description: eventItem.description,
+        category: eventItem.category,
+        venue: eventItem.venue,
+        address: eventItem.address,
+        city: eventItem.city,
+        startDate: eventItem.startDate,
+        endDate: eventItem.endDate,
+        capacity: eventItem.capacity,
+        imageUrl: eventItem.imageUrl,
+        status: 'Rejected'
+      });
+      loadDashboardData();
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Error al rechazar el evento.');
+    }
+  };
+
+  // Admin action: hold event
+  const handleHoldEvent = async (eventItem) => {
+    if (!window.confirm('¿Estás seguro de que deseas poner este evento EN ESPERA?')) return;
+    try {
+      await apiClient.put(`/api/Events/${eventItem.id}`, {
+        title: eventItem.title,
+        description: eventItem.description,
+        category: eventItem.category,
+        venue: eventItem.venue,
+        address: eventItem.address,
+        city: eventItem.city,
+        startDate: eventItem.startDate,
+        endDate: eventItem.endDate,
+        capacity: eventItem.capacity,
+        imageUrl: eventItem.imageUrl,
+        status: 'OnHold'
+      });
+      loadDashboardData();
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Error al poner en espera el evento.');
+    }
+  };
+
+  // Admin/Organizer action: cancel event
+  const handleCancelEvent = async (eventId) => {
+    if (!window.confirm('¿Estás seguro de que deseas CANCELAR este evento?')) return;
+    try {
+      await apiClient.patch(`/api/Events/${eventId}/cancel`);
+      loadDashboardData();
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Error al cancelar el evento.');
+    }
+  };
+
+  // Admin action: delete event
+  const handleDeleteEvent = async (eventId) => {
+    if (!window.confirm('¿Estás seguro de que deseas ELIMINAR permanentemente este evento del catálogo?')) return;
+    try {
+      await apiClient.delete(`/api/Events/${eventId}`);
+      loadDashboardData();
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Error al eliminar el evento.');
+    }
+  };
+
+  // Open edit modal for an event
+  const openEditEvent = async (eventItem) => {
+    setIsEditing(true);
+    setEditingEventId(eventItem.id);
+    
+    // Format local datetime strings for inputs (YYYY-MM-DDThh:mm)
+    const formatDateTimeLocal = (dateStr) => {
+      const d = new Date(dateStr);
+      const pad = (n) => n.toString().padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
+    setFormData({
+      title: eventItem.title,
+      description: eventItem.description,
+      category: eventItem.category,
+      venue: eventItem.venue,
+      address: eventItem.address,
+      city: eventItem.city,
+      startDate: formatDateTimeLocal(eventItem.startDate),
+      endDate: formatDateTimeLocal(eventItem.endDate),
+      capacity: eventItem.capacity.toString(),
+      status: eventItem.status
+    });
+
+    setImagePreview(eventItem.imageUrl);
+
+    // Fetch existing zones
+    try {
+      const typesData = await apiClient.get(`/api/EventTicketTypes/event/${eventItem.id}`);
+      if (typesData && typesData.length > 0) {
+        setFormTicketTypes(typesData.map(t => ({
+          id: t.id,
+          name: t.name,
+          price: t.price.toString(),
+          stock: t.stock.toString()
+        })));
+      } else {
+        setFormTicketTypes([{ name: 'General', price: '50.00', stock: '100' }]);
+      }
+    } catch (err) {
+      console.error('Error fetching ticket types for edit:', err);
+      setFormTicketTypes([{ name: 'General', price: '50.00', stock: '100' }]);
+    }
+
+    setCreateModalOpen(true);
+  };
+
+  // Handle Submit Form (either Create or Update)
+  const handleSaveEvent = async (e) => {
     e.preventDefault();
     setFormError('');
     setFormSubmitting(true);
 
-    // Validate date order
+    const capacityVal = parseInt(formData.capacity) || 0;
+    if (capacityVal <= 0) {
+      setFormError('La capacidad del evento debe ser mayor a cero.');
+      setFormSubmitting(false);
+      return;
+    }
+
+    // Validate dates
     if (new Date(formData.startDate) >= new Date(formData.endDate)) {
       setFormError('La fecha de inicio debe ser anterior a la fecha de finalización.');
       setFormSubmitting(false);
       return;
     }
 
-    // Validate stock sum does not exceed event capacity
-    const totalTicketStock = formTicketTypes.reduce((acc, curr) => acc + curr.stock, 0);
-    if (totalTicketStock > formData.capacity) {
-      setFormError(`La suma de stocks de las zonas (${totalTicketStock}) excede la capacidad total del evento (${formData.capacity}).`);
+    // Validate individual ticket type stocks and prices
+    for (let i = 0; i < formTicketTypes.length; i++) {
+      const type = formTicketTypes[i];
+      if (!type.name.trim()) {
+        setFormError(`El nombre de la zona ${i + 1} no puede estar vacío.`);
+        setFormSubmitting(false);
+        return;
+      }
+      const priceVal = parseFloat(type.price);
+      if (isNaN(priceVal) || priceVal < 0) {
+        setFormError(`El precio de la zona "${type.name || (i + 1)}" debe ser mayor o igual a cero.`);
+        setFormSubmitting(false);
+        return;
+      }
+      const stockVal = parseInt(type.stock) || 0;
+      if (stockVal <= 0) {
+        setFormError(`El stock de la zona "${type.name || (i + 1)}" debe ser mayor a cero.`);
+        setFormSubmitting(false);
+        return;
+      }
+    }
+
+    // Validate stock sum does not exceed capacity
+    const totalTicketStock = formTicketTypes.reduce((acc, curr) => acc + (parseInt(curr.stock) || 0), 0);
+    if (totalTicketStock > capacityVal) {
+      setFormError(`La suma del stock de las zonas (${totalTicketStock}) no puede superar la capacidad del evento (${capacityVal}).`);
       setFormSubmitting(false);
       return;
     }
 
     try {
-      // Step 1: Create Event
-      const newEvent = await apiClient.post('/api/Events', {
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        venue: formData.venue,
-        address: formData.address,
-        city: formData.city,
-        startDate: new Date(formData.startDate).toISOString(),
-        endDate: new Date(formData.endDate).toISOString(),
-        capacity: parseInt(formData.capacity),
-        status: formData.status,
-        imageUrl: imagePreview
-      });
+      if (isEditing) {
+        // Edit Mode: PUT basic event info
+        await apiClient.put(`/api/Events/${editingEventId}`, {
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          venue: formData.venue,
+          address: formData.address,
+          city: formData.city,
+          startDate: new Date(formData.startDate).toISOString(),
+          endDate: new Date(formData.endDate).toISOString(),
+          capacity: capacityVal,
+          status: formData.status,
+          imageUrl: imagePreview
+        });
 
-      // Step 2: Create ticket types sequentially
-      if (newEvent && newEvent.id) {
+        // Edit/Create event ticket zones
         for (const type of formTicketTypes) {
-          await apiClient.post('/api/EventTicketTypes', {
-            eventId: newEvent.id,
-            name: type.name,
-            price: type.price,
-            stock: type.stock
-          });
+          if (type.id) {
+            // Update existing ticket type
+            await apiClient.put(`/api/EventTicketTypes/${type.id}`, {
+              name: type.name,
+              price: parseFloat(type.price),
+              stock: parseInt(type.stock),
+              isActive: true
+            });
+          } else {
+            // Create new ticket type
+            await apiClient.post('/api/EventTicketTypes', {
+              eventId: editingEventId,
+              name: type.name,
+              price: parseFloat(type.price),
+              stock: parseInt(type.stock)
+            });
+          }
+        }
+      } else {
+        // Create Mode: POST new event
+        const newEvent = await apiClient.post('/api/Events', {
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          venue: formData.venue,
+          address: formData.address,
+          city: formData.city,
+          startDate: new Date(formData.startDate).toISOString(),
+          endDate: new Date(formData.endDate).toISOString(),
+          capacity: capacityVal,
+          status: formData.status,
+          imageUrl: imagePreview
+        });
+
+        // POST all zones
+        if (newEvent && newEvent.id) {
+          for (const type of formTicketTypes) {
+            await apiClient.post('/api/EventTicketTypes', {
+              eventId: newEvent.id,
+              name: type.name,
+              price: parseFloat(type.price),
+              stock: parseInt(type.stock)
+            });
+          }
         }
       }
 
@@ -209,39 +438,25 @@ export const AdminDashboard = () => {
       setTimeout(() => {
         setCreateModalOpen(false);
         setFormSuccess(false);
-        // Reset forms
-        setFormData({
-          title: '',
-          description: '',
-          category: 'Conciertos',
-          venue: '',
-          address: '',
-          city: '',
-          startDate: '',
-          endDate: '',
-          capacity: 100,
-          status: 'Draft'
-        });
-        setImagePreview(null);
-        setFormTicketTypes([{ name: 'General', price: 50.00, stock: 100 }]);
-        loadDashboardData(); // Refresh list
-      }, 2000);
+        setIsEditing(false);
+        setEditingEventId(null);
+        loadDashboardData();
+      }, 1500);
 
     } catch (err) {
-      console.error('Error creating event or ticket types:', err);
-      setFormError(err.message || 'Error en la API al registrar el evento.');
+      console.error('Error saving event:', err);
+      setFormError(err.message || 'Error en la API al procesar la solicitud.');
     } finally {
       setFormSubmitting(false);
     }
   };
 
-  // Math metrics helper
+  // Metric helpers
   const totalEventsCount = eventsList.length;
   const publishedEventsCount = eventsList.filter(e => e.status === 'Published').length;
   const totalCapacityStock = eventsList.reduce((acc, curr) => acc + curr.capacity, 0);
   const totalSoldStock = eventsList.reduce((acc, curr) => acc + curr.ticketsSold, 0);
   
-  // Admin-only metric fallback calculations
   const totalOrdersCount = forbiddenError.orders ? 'N/A (Admin)' : ordersList.length;
   const totalUsersCount = forbiddenError.users ? 'N/A (Admin)' : usersList.length;
   const totalTicketsSoldFromTickets = forbiddenError.tickets ? totalSoldStock : ticketsList.length;
@@ -251,7 +466,7 @@ export const AdminDashboard = () => {
 
   return (
     <div className="container">
-      {/* Top Banner Header */}
+      {/* Dashboard Top Navigation Banner */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -263,10 +478,29 @@ export const AdminDashboard = () => {
         <div>
           <h2 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.25rem' }}>Panel de Control 🛠️</h2>
           <p style={{ color: 'var(--text-secondary)' }}>
-            Bienvenido, <strong style={{ color: 'var(--text-primary)' }}>{user?.fullName}</strong> ({user?.role}). Gestiona tu catálogo y monitorea ventas.
+            Sesión: <strong style={{ color: 'var(--text-primary)' }}>{user?.fullName}</strong> ({user?.role}). Gestiona tu catálogo y aprueba eventos.
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => setCreateModalOpen(true)}>
+        <button className="btn btn-primary" onClick={() => {
+          setIsEditing(false);
+          setEditingEventId(null);
+          setFormData({
+            title: '',
+            description: '',
+            category: 'Conciertos',
+            venue: '',
+            address: '',
+            city: '',
+            startDate: '',
+            endDate: '',
+            capacity: '100',
+            status: user?.role === 'Organizer' ? 'PendingReview' : 'Draft'
+          });
+          setImagePreview(null);
+          setFormTicketTypes([{ name: 'General', price: '50.00', stock: '100' }]);
+          setFormError('');
+          setCreateModalOpen(true);
+        }}>
           <Plus size={16} /> Crear Nuevo Evento
         </button>
       </div>
@@ -329,13 +563,11 @@ export const AdminDashboard = () => {
           {/* TAB 1: METRICS */}
           {activeTab === 'metrics' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-              {/* Grid 1: Sales and Global Numbers */}
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
                 gap: '1.5rem'
               }}>
-                {/* Metric Card: Estimated Revenue */}
                 <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
                   <div style={{ backgroundColor: 'rgba(16,185,129,0.1)', color: 'var(--success)', padding: '0.875rem', borderRadius: '10px', display: 'flex' }}>
                     <Coins size={24} />
@@ -348,7 +580,6 @@ export const AdminDashboard = () => {
                   </div>
                 </div>
 
-                {/* Metric Card: Tickets Sold */}
                 <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
                   <div style={{ backgroundColor: 'rgba(99,102,241,0.1)', color: 'var(--primary)', padding: '0.875rem', borderRadius: '10px', display: 'flex' }}>
                     <TrendingUp size={24} />
@@ -359,7 +590,6 @@ export const AdminDashboard = () => {
                   </div>
                 </div>
 
-                {/* Metric Card: Orders */}
                 <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
                   <div style={{ backgroundColor: 'rgba(14,165,233,0.1)', color: 'var(--info)', padding: '0.875rem', borderRadius: '10px', display: 'flex' }}>
                     <BarChart3 size={24} />
@@ -370,7 +600,6 @@ export const AdminDashboard = () => {
                   </div>
                 </div>
 
-                {/* Metric Card: Users */}
                 <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
                   <div style={{ backgroundColor: 'rgba(168,85,247,0.1)', color: 'var(--accent)', padding: '0.875rem', borderRadius: '10px', display: 'flex' }}>
                     <Users size={24} />
@@ -382,13 +611,11 @@ export const AdminDashboard = () => {
                 </div>
               </div>
 
-              {/* Grid 2: Catalog Stats & Stocks */}
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
                 gap: '1.5rem'
               }}>
-                {/* Metric Card: Total Events */}
                 <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>CATÁLOGO DE EVENTOS</span>
@@ -396,11 +623,10 @@ export const AdminDashboard = () => {
                   </div>
                   <h3 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>{totalEventsCount}</h3>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    {publishedEventsCount} publicados | {totalEventsCount - publishedEventsCount} borradores
+                    {publishedEventsCount} publicados | {totalEventsCount - publishedEventsCount} borradores/pendientes
                   </div>
                 </div>
 
-                {/* Metric Card: Stock Capacity */}
                 <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>CAPACIDAD TOTAL AFORO</span>
@@ -412,7 +638,6 @@ export const AdminDashboard = () => {
                   </div>
                 </div>
 
-                {/* Metric Card: Sales progress percentage */}
                 <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>PORCENTAJE VENDIDO GLOBAL</span>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
@@ -431,7 +656,6 @@ export const AdminDashboard = () => {
                 </div>
               </div>
 
-              {/* Forbidden / Restricted Alerts for Organizer */}
               {(forbiddenError.users || forbiddenError.orders) && (
                 <div className="card" style={{
                   backgroundColor: 'rgba(245, 158, 11, 0.05)',
@@ -458,13 +682,14 @@ export const AdminDashboard = () => {
           {/* TAB 2: EVENTS CATALOG */}
           {activeTab === 'events' && (
             <div className="card" style={{ padding: '1.5rem 0' }}>
-              <div style={{ padding: '0 1.5rem 1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Gestión de Catálogo</h3>
-                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', margin: 0 }}>
-                    Monitorea la capacidad, ventas y el estado de publicación de cada evento.
-                  </p>
-                </div>
+              <div style={{ padding: '0 1.5rem 1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Gestión de Catálogo</h3>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', margin: 0 }}>
+                  {user?.role === 'Admin' 
+                    ? 'Monitorea, aprueba y administra el catálogo de eventos del sistema.'
+                    : 'Administra tus eventos creados y visualiza su estado de revisión.'
+                  }
+                </p>
               </div>
 
               <div style={{ padding: '0 1.5rem' }}>
@@ -482,50 +707,148 @@ export const AdminDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {eventsList.map(e => {
-                        const percent = e.capacity > 0 ? ((e.ticketsSold / e.capacity) * 100).toFixed(1) : 0;
-                        const formattedDate = new Date(e.startDate).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' });
+                      {eventsList
+                        .filter(e => user?.role === 'Admin' || e.organizerId === user?.id)
+                        .map(e => {
+                          const percent = e.capacity > 0 ? ((e.ticketsSold / e.capacity) * 100).toFixed(1) : 0;
+                          const formattedDate = new Date(e.startDate).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' });
+                          const isPublished = e.status === 'Published';
 
-                        return (
-                          <tr key={e.id}>
-                            <td style={{ fontWeight: 700 }}>{e.title}</td>
-                            <td>
-                              <span className="badge badge-info">{e.category}</span>
-                            </td>
-                            <td>{e.city}</td>
-                            <td>{formattedDate}</td>
-                            <td>
-                              <span className={`badge ${e.status === 'Published' ? 'badge-success' : 'badge-warning'}`}>
-                                {e.status === 'Published' ? 'Publicado' : 'Borrador'}
-                              </span>
-                            </td>
-                            <td>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', minWidth: '100px' }}>
-                                <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>
-                                  {e.ticketsSold} / {e.capacity} ({percent}%)
+                          return (
+                            <tr key={e.id}>
+                              <td style={{ fontWeight: 700 }}>{e.title}</td>
+                              <td>
+                                <span className="badge badge-info">{e.category}</span>
+                              </td>
+                              <td>{e.city}</td>
+                              <td>{formattedDate}</td>
+                              <td>
+                                <span className={`badge ${getStatusBadgeClass(e.status)}`}>
+                                  {getStatusLabel(e.status)}
                                 </span>
-                                <div style={{ height: '6px', backgroundColor: 'var(--border-color)', borderRadius: '3px', overflow: 'hidden' }}>
-                                  <div style={{
-                                    height: '100%',
-                                    width: `${percent}%`,
-                                    backgroundColor: 'var(--success)',
-                                    borderRadius: '3px'
-                                  }} />
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', minWidth: '100px' }}>
+                                  <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>
+                                    {e.ticketsSold} / {e.capacity} ({percent}%)
+                                  </span>
+                                  <div style={{ height: '6px', backgroundColor: 'var(--border-color)', borderRadius: '3px', overflow: 'hidden' }}>
+                                    <div style={{
+                                      height: '100%',
+                                      width: `${percent}%`,
+                                      backgroundColor: 'var(--success)',
+                                      borderRadius: '3px'
+                                    }} />
+                                  </div>
                                 </div>
-                              </div>
-                            </td>
-                            <td>
-                              <button 
-                                onClick={() => openEventDetails(e)}
-                                className="btn btn-secondary" 
-                                style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem', gap: '0.25rem' }}
-                              >
-                                <Eye size={12} /> Detalles
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+                                  <button 
+                                    onClick={() => openEventDetails(e)}
+                                    className="btn btn-secondary" 
+                                    style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem', gap: '0.25rem' }}
+                                    title="Ver Detalles"
+                                  >
+                                    <Eye size={12} />
+                                  </button>
+
+                                  {/* Organizer Action: Edit only if not published */}
+                                  {user?.role === 'Organizer' && (
+                                    <button 
+                                      onClick={() => openEditEvent(e)}
+                                      className="btn btn-secondary" 
+                                      style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem', gap: '0.25rem' }}
+                                      disabled={isPublished}
+                                      title={isPublished ? "No se pueden editar eventos publicados" : "Editar Evento"}
+                                    >
+                                      <Edit size={12} />
+                                    </button>
+                                  )}
+
+                                  {/* Organizer Action: Cancel if published */}
+                                  {user?.role === 'Organizer' && isPublished && (
+                                    <button 
+                                      onClick={() => handleCancelEvent(e.id)}
+                                      className="btn btn-danger" 
+                                      style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem', gap: '0.25rem', color: '#fff', border: 'none' }}
+                                      title="Cancelar Evento"
+                                    >
+                                      <XCircle size={12} />
+                                    </button>
+                                  )}
+
+                                  {/* Admin Actions */}
+                                  {user?.role === 'Admin' && (
+                                    <>
+                                      <button 
+                                        onClick={() => openEditEvent(e)}
+                                        className="btn btn-secondary" 
+                                        style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem' }}
+                                        title="Editar Evento"
+                                      >
+                                        <Edit size={12} />
+                                      </button>
+
+                                      {!isPublished && e.status !== 'Cancelled' && (
+                                        <button 
+                                          onClick={() => handlePublishEvent(e.id)}
+                                          className="btn btn-primary" 
+                                          style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem', backgroundColor: 'var(--success)', borderColor: 'var(--success)' }}
+                                          title="Aprobar y Publicar"
+                                        >
+                                          <Play size={12} />
+                                        </button>
+                                      )}
+
+                                      {e.status === 'PendingReview' && (
+                                        <button 
+                                          onClick={() => handleRejectEvent(e)}
+                                          className="btn btn-danger" 
+                                          style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem', color: '#fff', border: 'none' }}
+                                          title="Rechazar Evento"
+                                        >
+                                          <XCircle size={12} />
+                                        </button>
+                                      )}
+
+                                      {e.status !== 'OnHold' && !isPublished && e.status !== 'Cancelled' && e.status !== 'Rejected' && (
+                                        <button 
+                                          onClick={() => handleHoldEvent(e)}
+                                          className="btn btn-secondary" 
+                                          style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem' }}
+                                          title="Poner en Espera"
+                                        >
+                                          <Clock size={12} />
+                                        </button>
+                                      )}
+
+                                      {e.status !== 'Cancelled' && (
+                                        <button 
+                                          onClick={() => handleCancelEvent(e.id)}
+                                          className="btn btn-danger" 
+                                          style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem', color: '#fff', border: 'none', backgroundColor: '#e11d48' }}
+                                          title="Cancelar Evento"
+                                        >
+                                          <Archive size={12} />
+                                        </button>
+                                      )}
+
+                                      <button 
+                                        onClick={() => handleDeleteEvent(e.id)}
+                                        className="btn btn-danger" 
+                                        style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem', color: '#fff', border: 'none' }}
+                                        title="Eliminar Evento"
+                                      >
+                                        <Trash2 size={12} />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       {eventsList.length === 0 && (
                         <tr>
                           <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
@@ -571,26 +894,24 @@ export const AdminDashboard = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {usersList.map(u => {
-                          return (
-                            <tr key={u.id}>
-                              <td style={{ fontWeight: 700 }}>{u.fullName}</td>
-                              <td>{u.email}</td>
-                              <td>
-                                <span className={`badge ${
-                                  u.role === 'Admin' 
-                                    ? 'badge-danger' 
-                                    : u.role === 'Organizer' 
-                                      ? 'badge-warning' 
-                                      : 'badge-success'
-                                }`}>
-                                  {u.role}
-                                </span>
-                              </td>
-                              <td>{new Date(u.createdAt).toLocaleDateString('es-PE')}</td>
-                            </tr>
-                          );
-                        })}
+                        {usersList.map(u => (
+                          <tr key={u.id}>
+                            <td style={{ fontWeight: 700 }}>{u.fullName}</td>
+                            <td>{u.email}</td>
+                            <td>
+                              <span className={`badge ${
+                                u.role === 'Admin' 
+                                  ? 'badge-danger' 
+                                  : u.role === 'Organizer' 
+                                    ? 'badge-warning' 
+                                    : 'badge-success'
+                              }`}>
+                                {u.role}
+                              </span>
+                            </td>
+                            <td>{new Date(u.createdAt).toLocaleDateString('es-PE')}</td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -601,7 +922,7 @@ export const AdminDashboard = () => {
         </>
       )}
 
-      {/* MODAL 1: CREAR EVENTO */}
+      {/* MODAL: CREAR / EDITAR EVENTO */}
       {createModalOpen && (
         <div style={{
           position: 'fixed',
@@ -626,7 +947,11 @@ export const AdminDashboard = () => {
             position: 'relative'
           }}>
             <button 
-              onClick={() => setCreateModalOpen(false)}
+              onClick={() => {
+                setCreateModalOpen(false);
+                setIsEditing(false);
+                setEditingEventId(null);
+              }}
               style={{
                 position: 'absolute',
                 top: '1.5rem',
@@ -652,14 +977,16 @@ export const AdminDashboard = () => {
                 }}>
                   <CheckCircle2 size={36} />
                 </div>
-                <h3>¡Evento Creado con Éxito!</h3>
+                <h3>{isEditing ? '¡Evento Actualizado con Éxito!' : '¡Evento Creado con Éxito!'}</h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-                  El evento y sus correspondientes zonas de entradas fueron registrados exitosamente en AWS.
+                  Los datos del evento fueron registrados correctamente en base de datos.
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleCreateEvent}>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1.25rem' }}>Crear Nuevo Evento</h3>
+              <form onSubmit={handleSaveEvent}>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1.25rem' }}>
+                  {isEditing ? 'Editar Evento' : 'Crear Nuevo Evento'}
+                </h3>
 
                 {formError && (
                   <div style={{
@@ -671,6 +998,21 @@ export const AdminDashboard = () => {
                     marginBottom: '1.25rem'
                   }}>
                     <span>{formError}</span>
+                  </div>
+                )}
+
+                {/* Info contextual por rol */}
+                {user?.role === 'Organizer' && !isEditing && (
+                  <div style={{
+                    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                    borderLeft: '4px solid var(--warning)',
+                    padding: '0.75rem 1rem',
+                    borderRadius: '4px',
+                    fontSize: '0.8125rem',
+                    color: 'var(--text-secondary)',
+                    marginBottom: '1.25rem'
+                  }}>
+                    <strong>Nota:</strong> Como Organizador, tu evento se creará automáticamente en estado <strong>En Revisión</strong>. El Administrador deberá auditarlo antes de que aparezca listado en la cartelera principal.
                   </div>
                 )}
 
@@ -751,6 +1093,7 @@ export const AdminDashboard = () => {
                   </div>
                 </div>
 
+                {/* Dynamic Inputs grid for dates, capacity & status */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem' }} className="event-form-grid-4">
                   <div className="form-group">
                     <label className="form-label">Fecha Inicio</label>
@@ -775,11 +1118,16 @@ export const AdminDashboard = () => {
                   <div className="form-group">
                     <label className="form-label">Capacidad</label>
                     <input 
-                      type="number" 
+                      type="text" 
                       className="form-input"
                       value={formData.capacity}
-                      onChange={e => setFormData({ ...formData, capacity: parseInt(e.target.value) || 0 })}
-                      min="1"
+                      onChange={e => {
+                        const val = e.target.value;
+                        // Regex prevents typing non-digits and zero at start
+                        if (val === '' || /^[1-9][0-9]*$/.test(val)) {
+                          setFormData({ ...formData, capacity: val });
+                        }
+                      }}
                       required 
                     />
                   </div>
@@ -789,9 +1137,23 @@ export const AdminDashboard = () => {
                       className="form-input"
                       value={formData.status}
                       onChange={e => setFormData({ ...formData, status: e.target.value })}
+                      disabled={user?.role === 'Organizer'}
                     >
-                      <option value="Draft">Draft</option>
-                      <option value="Published">Published</option>
+                      {user?.role === 'Organizer' ? (
+                        <>
+                          <option value="PendingReview">En Revisión</option>
+                          <option value="Draft">Borrador</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="Draft">Draft (Borrador)</option>
+                          <option value="PendingReview">PendingReview (Revisión)</option>
+                          <option value="Published">Published (Publicado)</option>
+                          <option value="OnHold">OnHold (Espera)</option>
+                          <option value="Rejected">Rejected (Rechazado)</option>
+                          <option value="Cancelled">Cancelled (Cancelado)</option>
+                        </>
+                      )}
                     </select>
                   </div>
                 </div>
@@ -827,7 +1189,7 @@ export const AdminDashboard = () => {
                   )}
                 </div>
 
-                {/* Section 2: Ticket Types list */}
+                {/* Section 2: Ticket Zones list */}
                 <div style={{
                   borderTop: '1px solid var(--border-color)',
                   paddingTop: '1.5rem',
@@ -866,23 +1228,33 @@ export const AdminDashboard = () => {
                       <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                         {idx === 0 && <label className="form-label">Precio (S/.)</label>}
                         <input 
-                          type="number" 
-                          step="0.01"
+                          type="text" 
                           className="form-input" 
                           placeholder="0.00"
                           value={type.price}
-                          onChange={e => updateFormTicketType(idx, 'price', e.target.value)}
+                          onChange={e => {
+                            const val = e.target.value;
+                            // Regex supports decimals up to 2 decimal places cleanly
+                            if (val === '' || /^[0-9]*\.?[0-9]{0,2}$/.test(val)) {
+                              updateFormTicketType(idx, 'price', val);
+                            }
+                          }}
                           required 
                         />
                       </div>
                       <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                         {idx === 0 && <label className="form-label">Stock</label>}
                         <input 
-                          type="number" 
+                          type="text" 
                           className="form-input" 
                           placeholder="0"
                           value={type.stock}
-                          onChange={e => updateFormTicketType(idx, 'stock', e.target.value)}
+                          onChange={e => {
+                            const val = e.target.value;
+                            if (val === '' || /^[1-9][0-9]*$/.test(val)) {
+                              updateFormTicketType(idx, 'stock', val);
+                            }
+                          }}
                           required 
                         />
                       </div>
@@ -900,12 +1272,16 @@ export const AdminDashboard = () => {
                   ))}
                 </div>
 
-                {/* Action button */}
+                {/* Submit / Cancel Actions */}
                 <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
                   <button 
                     type="button" 
                     className="btn btn-secondary" 
-                    onClick={() => setCreateModalOpen(false)}
+                    onClick={() => {
+                      setCreateModalOpen(false);
+                      setIsEditing(false);
+                      setEditingEventId(null);
+                    }}
                     style={{ flex: 1 }}
                   >
                     Cancelar
@@ -925,7 +1301,7 @@ export const AdminDashboard = () => {
                         borderRadius: '50%',
                         animation: 'spin 1s linear infinite'
                       }} />
-                    ) : 'Guardar y Publicar'}
+                    ) : (isEditing ? 'Guardar Cambios' : 'Registrar Evento')}
                   </button>
                 </div>
               </form>
@@ -934,7 +1310,7 @@ export const AdminDashboard = () => {
         </div>
       )}
 
-      {/* MODAL 2: EVENT DETAILS */}
+      {/* MODAL: EVENT DETAILS */}
       {detailModalOpen && selectedEventForDetail && (
         <div style={{
           position: 'fixed',
@@ -974,11 +1350,13 @@ export const AdminDashboard = () => {
             <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.25rem' }}>
               {selectedEventForDetail.title}
             </h3>
-            <span className="badge badge-info" style={{ marginBottom: '1.5rem' }}>
-              {selectedEventForDetail.category}
-            </span>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+              <span className="badge badge-info">{selectedEventForDetail.category}</span>
+              <span className={`badge ${getStatusBadgeClass(selectedEventForDetail.status)}`}>
+                {getStatusLabel(selectedEventForDetail.status)}
+              </span>
+            </div>
 
-            {/* Performance status metrics */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr 1fr',
@@ -1005,7 +1383,6 @@ export const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* Progress bar */}
             <div style={{ marginBottom: '2rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
                 <span>Progreso de ventas</span>
@@ -1025,13 +1402,12 @@ export const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* Ticket types breakdown */}
             <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
               <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem' }}>Detalle de Zonas</h4>
               
               {selectedEventTicketTypes.length === 0 ? (
                 <div style={{ color: 'var(--text-secondary)', textAlign: 'center', fontSize: '0.875rem', padding: '1rem' }}>
-                  Cargando información de zonas...
+                  Cargando zonas de entradas...
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -1077,10 +1453,10 @@ export const AdminDashboard = () => {
         </div>
       )}
 
-      {/* Custom Styles overrides */}
+      {/* Custom layout CSS media query rules */}
       <style>{`
         @media (max-width: 768px) {
-          .event-form-grid, .event-form-grid-3 {
+          .event-form-grid, .event-form-grid-3, .event-form-grid-4 {
             grid-template-columns: 1fr !important;
             gap: 0.5rem !important;
           }

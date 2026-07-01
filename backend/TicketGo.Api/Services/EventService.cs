@@ -126,8 +126,8 @@ public class EventService : IEventService
         if (existingEvent == null)
             throw new KeyNotFoundException("Evento no encontrado.");
 
-        if (existingEvent.Status != "Draft")
-            throw new InvalidOperationException("Solo se pueden publicar eventos en estado Draft.");
+        if (existingEvent.Status != "Draft" && existingEvent.Status != "PendingReview" && existingEvent.Status != "OnHold")
+            throw new InvalidOperationException("Solo se pueden publicar eventos en estado Draft, PendingReview o OnHold.");
 
         if (existingEvent.StartDate <= DateTime.UtcNow)
             throw new InvalidOperationException("No se puede publicar un evento con fecha pasada.");

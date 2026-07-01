@@ -73,10 +73,10 @@ export const MainLayout = () => {
                 )}
                 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '1.5rem' }}>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>{user?.fullName}</div>
+                  <Link to="/profile" style={{ textAlign: 'right', textDecoration: 'none', marginRight: '0.25rem' }} title="Mi Perfil">
+                    <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>{user?.fullName}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{user?.role}</div>
-                  </div>
+                  </Link>
                   <button onClick={handleLogout} className="btn btn-secondary" style={{ padding: '0.5rem', borderRadius: '50%', width: '38px', height: '38px' }} title="Cerrar Sesión">
                     <LogOut size={16} />
                   </button>

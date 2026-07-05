@@ -20,6 +20,28 @@ terraform {
       version = "~> 6.0"
     }
   }
+
+  # ============================================================
+  # BACKEND REMOTO - ESTADO EN S3
+  # ============================================================
+  # Almacena el terraform.tfstate en S3 para que el estado sea
+  # compartido y no quede atado a una sola máquina.
+  #
+  # El bucket y la tabla DynamoDB deben crearse ANTES del primer
+  # terraform init, ejecutando:
+  #   .\infra\bootstrap\setup-backend.ps1
+  #
+  # NOTA: El bloque backend no acepta variables de Terraform.
+  # Los valores están escritos directamente aquí de forma intencional.
+  # ============================================================
+  backend "s3" {
+    bucket         = "ticketgo-terraform-state-329871097383"
+    key            = "terraform/ticketgo.tfstate"
+    region         = "us-east-2"
+    profile        = "anthony-admi"
+    dynamodb_table = "ticketgo-terraform-locks"
+    encrypt        = true
+  }
 }
 
 # ============================================================

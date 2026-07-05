@@ -17,9 +17,8 @@ variable "aws_region" {
 }
 
 variable "aws_profile" {
-  description = "Perfil de AWS CLI a utilizar para la autenticación"
+  description = "Perfil de AWS CLI a usar. Cada integrante define el suyo en terraform.tfvars (no se sube al repo)."
   type        = string
-  default     = "anthony-admi"
 }
 
 variable "aws_account_id" {

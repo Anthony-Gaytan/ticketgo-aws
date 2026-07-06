@@ -83,7 +83,6 @@ resource "aws_db_parameter_group" "ticketgo_db_pg" {
 # y almacenada en Secrets Manager (manage_master_user_password).
 # No tiene acceso público ni IP pública.
 resource "aws_db_instance" "ticketgo_db" {
-  # checkov:skip=CKV_AWS_157:Multi-AZ esta desactivado por defecto en la variable rds_multi_az para evitar duplicar costos en el ambiente de demo.
   identifier     = "ticketgo-db"
   engine         = "postgres"
   engine_version = "16"

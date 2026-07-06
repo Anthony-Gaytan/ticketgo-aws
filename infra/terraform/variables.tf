@@ -134,7 +134,7 @@ variable "db_username" {
 variable "rds_multi_az" {
   description = "Habilitar Multi-AZ para RDS (duplica el costo)"
   type        = bool
-  default     = false
+  default     = true
 }
 
 # ------------------------------------------------------------

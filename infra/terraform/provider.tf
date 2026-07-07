@@ -38,7 +38,7 @@ terraform {
     bucket         = "ticketgo-terraform-state-329871097383"
     key            = "terraform/ticketgo.tfstate"
     region         = "us-east-2"
-    profile        = "anthony-admi"
+    # profile        = "anthony-admi" # Comentado para soportar múltiples perfiles en el equipo
     dynamodb_table = "ticketgo-terraform-locks"
     encrypt        = true
   }

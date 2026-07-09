@@ -41,5 +41,10 @@ jobs:
         working-directory: infra/terraform
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve
+        run: |
+          terraform apply -auto-approve \
+            -var="aws_account_id=${{ secrets.AWS_ACCOUNT_ID }}" \
+            -var="ses_email_identity=${{ secrets.SES_EMAIL_IDENTITY }}" \
+            -var="rds_multi_az=false" \
+            -var="rds_deletion_protection=false"
         working-directory: infra/terraform

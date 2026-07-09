@@ -17,8 +17,9 @@ variable "aws_region" {
 }
 
 variable "aws_profile" {
-  description = "Perfil de AWS CLI a usar. Cada integrante define el suyo en terraform.tfvars (no se sube al repo)."
+  description = "Perfil de AWS CLI a usar. Cada integrante define el suyo en terraform.tfvars (no se sube al repo). En CI/CD con OIDC se deja vacío (null)."
   type        = string
+  default     = null
 }
 
 variable "aws_account_id" {

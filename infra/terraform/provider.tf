@@ -49,6 +49,8 @@ terraform {
 # ============================================================
 provider "aws" {
   region  = var.aws_region
+  # profile se define solo en local (via terraform.tfvars).
+  # En GitHub Actions con OIDC se omite (null) para usar las credenciales del entorno.
   profile = var.aws_profile
 
   default_tags {
@@ -69,6 +71,8 @@ provider "aws" {
 provider "aws" {
   alias   = "us_east_1"
   region  = "us-east-1"
+  # profile se define solo en local (via terraform.tfvars).
+  # En GitHub Actions con OIDC se omite (null) para usar las credenciales del entorno.
   profile = var.aws_profile
 
   default_tags {

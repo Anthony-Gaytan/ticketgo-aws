@@ -148,6 +148,13 @@ resource "aws_iam_role_policy" "ecs_secrets_policy" {
           aws_secretsmanager_secret.ticketgo_db_credentials.arn,
           aws_secretsmanager_secret.ticketgo_jwt_secret.arn
         ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt"
+        ]
+        Resource = aws_kms_key.ticketgo_key.arn
       }
     ]
   })

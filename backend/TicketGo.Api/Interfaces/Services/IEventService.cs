@@ -5,9 +5,9 @@ namespace TicketGo.Api.Interfaces.Services;
 
 public interface IEventService
 {
-    Task<List<EventResponseDto>> GetAllAsync();
+    Task<List<EventResponseDto>> GetAllAsync(ClaimsPrincipal? user = null);
 
-    Task<EventResponseDto> GetByIdAsync(Guid id);
+    Task<EventResponseDto> GetByIdAsync(Guid id, ClaimsPrincipal? user = null);
 
     Task<EventResponseDto> CreateAsync(CreateEventDto request, ClaimsPrincipal user);
 

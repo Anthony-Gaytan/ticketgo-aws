@@ -86,6 +86,10 @@ resource "aws_ecs_task_definition" "ticketgo_api_task" {
         {
           name  = "AWS_SQS_QUEUE_URL"
           value = aws_sqs_queue.ticketgo_notifications.url
+        },
+        {
+          name  = "AUTO_MIGRATE_DATABASE"
+          value = var.auto_migrate_database
         }
       ]
 
@@ -117,7 +121,7 @@ resource "aws_ecs_service" "ticketgo_api_service" {
   name            = "ticketgo-api-service"
   cluster         = aws_ecs_cluster.ticketgo_cluster.id
   task_definition = aws_ecs_task_definition.ticketgo_api_task.arn
-  desired_count   = 1
+  desired_count   = var.ecs_desired_count
   launch_type     = "FARGATE"
 
   network_configuration {

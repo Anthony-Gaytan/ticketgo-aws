@@ -163,3 +163,25 @@ variable "alb_deletion_protection" {
   type        = bool
   default     = false
 }
+
+# ------------------------------------------------------------
+# DEMO/STAGING BOOTSTRAP AND FINOPS CONFIG
+# ------------------------------------------------------------
+
+variable "enable_waf" {
+  description = "Habilitar AWS WAFv2 para la distribucion de CloudFront"
+  type        = bool
+  default     = false
+}
+
+variable "ecs_desired_count" {
+  description = "Cantidad deseada de tareas ECS corriendo. Inicialmente 0 para permitir subir la imagen a ECR primero."
+  type        = number
+  default     = 0
+}
+
+variable "auto_migrate_database" {
+  description = "Habilitar la ejecucion automatica de migraciones EF Core al iniciar el contenedor de ECS"
+  type        = string
+  default     = "true"
+}

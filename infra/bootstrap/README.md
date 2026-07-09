@@ -9,7 +9,7 @@ Crea los recursos AWS necesarios para guardar el estado de Terraform de forma re
 
 | Recurso | Nombre | Propósito |
 |---|---|---|
-| S3 Bucket | `ticketgo-terraform-state-329871097383` | Almacena el archivo `terraform.tfstate` |
+| S3 Bucket | `ticketgo-terraform-state-329871097383-us-east-2` | Almacena el archivo `terraform.tfstate` |
 | DynamoDB Table | `ticketgo-terraform-locks` | Evita conflictos si dos personas aplican al mismo tiempo |
 
 ## Para el equipo (3 integrantes)

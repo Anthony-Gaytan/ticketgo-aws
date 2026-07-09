@@ -44,10 +44,83 @@ resource "aws_iam_role" "github_actions_role" {
   }
 }
 
-# Política de permisos para el rol de GitHub Actions
-# Se asigna AdministratorAccess porque el pipeline de Terraform
-# necesita crear VPCs, RDS, ECS, IAM Roles, etc.
-resource "aws_iam_role_policy_attachment" "github_actions_admin" {
+# Política de permisos para el rol de GitHub Actions.
+# PowerUserAccess cubre recursos no-IAM; los permisos IAM se acotan a recursos ticketgo-*.
+resource "aws_iam_role_policy_attachment" "github_actions_power_user" {
   role       = aws_iam_role.github_actions_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+  policy_arn = "arn:aws:iam::aws:policy/PowerUserAccess"
+}
+
+resource "aws_iam_role_policy" "github_actions_iam_policy" {
+  name = "ticketgo-github-actions-iam-policy"
+  role = aws_iam_role.github_actions_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "ManageTicketGoIamRolesAndPolicies"
+        Effect = "Allow"
+        Action = [
+          "iam:AttachRolePolicy",
+          "iam:CreatePolicy",
+          "iam:CreatePolicyVersion",
+          "iam:CreateRole",
+          "iam:DeletePolicy",
+          "iam:DeletePolicyVersion",
+          "iam:DeleteRole",
+          "iam:DeleteRolePolicy",
+          "iam:DetachRolePolicy",
+          "iam:GetPolicy",
+          "iam:GetPolicyVersion",
+          "iam:GetRole",
+          "iam:GetRolePolicy",
+          "iam:ListAttachedRolePolicies",
+          "iam:ListInstanceProfilesForRole",
+          "iam:ListPolicyVersions",
+          "iam:ListRolePolicies",
+          "iam:PassRole",
+          "iam:PutRolePolicy",
+          "iam:TagPolicy",
+          "iam:TagRole",
+          "iam:UntagPolicy",
+          "iam:UntagRole",
+          "iam:UpdateAssumeRolePolicy",
+          "iam:UpdateRole",
+          "iam:UpdateRoleDescription"
+        ]
+        Resource = [
+          "arn:aws:iam::${var.aws_account_id}:policy/ticketgo-*",
+          "arn:aws:iam::${var.aws_account_id}:role/ticketgo-*"
+        ]
+      },
+      {
+        Sid    = "ManageTicketGoOidcProvider"
+        Effect = "Allow"
+        Action = [
+          "iam:CreateOpenIDConnectProvider",
+          "iam:DeleteOpenIDConnectProvider",
+          "iam:GetOpenIDConnectProvider",
+          "iam:TagOpenIDConnectProvider",
+          "iam:UpdateOpenIDConnectProviderThumbprint"
+        ]
+        Resource = "arn:aws:iam::${var.aws_account_id}:oidc-provider/token.actions.githubusercontent.com"
+      },
+      {
+        Sid    = "ReadIamMetadata"
+        Effect = "Allow"
+        Action = [
+          "iam:GetPolicy",
+          "iam:GetPolicyVersion",
+          "iam:GetRole",
+          "iam:ListPolicies",
+          "iam:ListRoles"
+        ]
+        Resource = [
+          "arn:aws:iam::${var.aws_account_id}:policy/ticketgo-*",
+          "arn:aws:iam::${var.aws_account_id}:role/ticketgo-*"
+        ]
+      }
+    ]
+  })
 }

@@ -17,9 +17,9 @@ variable "aws_region" {
 }
 
 variable "aws_profile" {
-  description = "Perfil de AWS CLI a utilizar para la autenticación"
+  description = "Perfil de AWS CLI a usar. Cada integrante define el suyo en terraform.tfvars (no se sube al repo). En CI/CD con OIDC se deja vacío (null)."
   type        = string
-  default     = "anthony-admi"
+  default     = null
 }
 
 variable "aws_account_id" {
@@ -135,7 +135,7 @@ variable "db_username" {
 variable "rds_multi_az" {
   description = "Habilitar Multi-AZ para RDS (duplica el costo)"
   type        = bool
-  default     = false
+  default     = true
 }
 
 # ------------------------------------------------------------

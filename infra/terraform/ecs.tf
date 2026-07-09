@@ -165,7 +165,7 @@ resource "aws_ecs_service" "ticketgo_api_service" {
 
 resource "aws_appautoscaling_target" "ecs_target" {
   max_capacity       = 3
-  min_capacity       = 1
+  min_capacity       = var.ecs_desired_count
   resource_id        = "service/${aws_ecs_cluster.ticketgo_cluster.name}/${aws_ecs_service.ticketgo_api_service.name}"
   scalable_dimension = "ecs:service:DesiredCount"
   service_namespace  = "ecs"

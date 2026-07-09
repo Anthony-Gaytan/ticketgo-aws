@@ -95,21 +95,39 @@ resource "aws_s3_bucket_lifecycle_configuration" "ticketgo_frontend_lifecycle" {
 resource "aws_s3_bucket_public_access_block" "ticketgo_frontend" {
   bucket = aws_s3_bucket.ticketgo_frontend.id
 
-  block_public_acls       = true
-  block_public_policy     = true
+  block_public_acls       = var.enable_cloudfront
+  block_public_policy     = var.enable_cloudfront
   ignore_public_acls      = true
-  restrict_public_buckets = true
+  restrict_public_buckets = var.enable_cloudfront
 }
 
 # ============================================================
-# BUCKET POLICY - ACCESO EXCLUSIVO DESDE CLOUDFRONT
+# S3 STATIC WEBSITE - DEMO SIN CLOUDFRONT
 # ============================================================
-# Solo permite que CloudFront (via OAC) lea los objetos del bucket.
-# Ningún otro servicio o usuario puede acceder directamente.
+# Permite servir el frontend directamente desde S3 cuando
+# CloudFront está deshabilitado por restricciones de cuenta.
+resource "aws_s3_bucket_website_configuration" "ticketgo_frontend" {
+  count  = var.enable_cloudfront ? 0 : 1
+  bucket = aws_s3_bucket.ticketgo_frontend.id
+
+  index_document {
+    suffix = "index.html"
+  }
+
+  error_document {
+    key = "index.html"
+  }
+}
+
+# ============================================================
+# BUCKET POLICY - ACCESO FRONTEND
+# ============================================================
+# Con CloudFront habilitado, solo permite acceso vía OAC.
+# Sin CloudFront, permite lectura pública temporal para demo S3 website.
 resource "aws_s3_bucket_policy" "ticketgo_frontend" {
   bucket = aws_s3_bucket.ticketgo_frontend.id
 
-  policy = jsonencode({
+  policy = var.enable_cloudfront ? jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
@@ -122,9 +140,20 @@ resource "aws_s3_bucket_policy" "ticketgo_frontend" {
         Resource = "${aws_s3_bucket.ticketgo_frontend.arn}/*"
         Condition = {
           StringEquals = {
-            "AWS:SourceArn" = aws_cloudfront_distribution.ticketgo_cdn.arn
+            "AWS:SourceArn" = aws_cloudfront_distribution.ticketgo_cdn[0].arn
           }
         }
+      }
+    ]
+    }) : jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AllowPublicReadForS3WebsiteDemo"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.ticketgo_frontend.arn}/*"
       }
     ]
   })

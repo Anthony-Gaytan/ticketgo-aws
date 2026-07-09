@@ -129,17 +129,22 @@ output "secrets_jwt_arn" {
 
 output "cloudfront_domain" {
   description = "Dominio de CloudFront para acceder al frontend"
-  value       = aws_cloudfront_distribution.ticketgo_cdn.domain_name
+  value       = var.enable_cloudfront ? aws_cloudfront_distribution.ticketgo_cdn[0].domain_name : null
 }
 
 output "cloudfront_url" {
   description = "URL completa del frontend"
-  value       = "https://${aws_cloudfront_distribution.ticketgo_cdn.domain_name}"
+  value       = var.enable_cloudfront ? "https://${aws_cloudfront_distribution.ticketgo_cdn[0].domain_name}" : null
 }
 
 output "s3_bucket_name" {
   description = "Nombre del bucket S3 del frontend"
   value       = aws_s3_bucket.ticketgo_frontend.id
+}
+
+output "s3_website_url" {
+  description = "URL temporal del S3 static website cuando CloudFront está deshabilitado"
+  value       = var.enable_cloudfront ? null : "http://${aws_s3_bucket_website_configuration.ticketgo_frontend[0].website_endpoint}"
 }
 
 # ------------------------------------------------------------
@@ -153,5 +158,5 @@ output "github_actions_role_arn" {
 
 output "cloudfront_distribution_id" {
   description = "ID de la distribución CloudFront (necesario para invalidar caché en el deploy del frontend)"
-  value       = aws_cloudfront_distribution.ticketgo_cdn.id
+  value       = var.enable_cloudfront ? aws_cloudfront_distribution.ticketgo_cdn[0].id : null
 }

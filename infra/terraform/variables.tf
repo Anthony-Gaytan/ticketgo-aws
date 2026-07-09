@@ -100,6 +100,12 @@ variable "lambda_timeout" {
   default     = 10
 }
 
+variable "enable_lambda_reserved_concurrency" {
+  description = "Habilitar reserved concurrency en Lambda. Para cuentas demo puede deshabilitarse para evitar limites de concurrencia no reservada."
+  type        = bool
+  default     = false
+}
+
 # ------------------------------------------------------------
 # OBSERVABILIDAD (cloudwatch.tf)
 # ------------------------------------------------------------
@@ -170,6 +176,12 @@ variable "alb_deletion_protection" {
 
 variable "enable_waf" {
   description = "Habilitar AWS WAFv2 para la distribucion de CloudFront"
+  type        = bool
+  default     = false
+}
+
+variable "enable_cloudfront" {
+  description = "Habilitar CloudFront para servir el frontend. En cuentas AWS no verificadas puede dejarse en false y usar S3 static website para demo."
   type        = bool
   default     = false
 }

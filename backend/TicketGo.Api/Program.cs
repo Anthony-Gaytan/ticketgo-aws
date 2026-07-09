@@ -140,6 +140,27 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+var autoMigrateDatabase = Environment.GetEnvironmentVariable("AUTO_MIGRATE_DATABASE");
+
+if (string.Equals(autoMigrateDatabase, "true", StringComparison.OrdinalIgnoreCase))
+{
+    using var scope = app.Services.CreateScope();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var context = scope.ServiceProvider.GetRequiredService<TicketGoDbContext>();
+
+    try
+    {
+        logger.LogInformation("Iniciando migración automática de base de datos.");
+        context.Database.Migrate();
+        logger.LogInformation("Migración automática de base de datos finalizada correctamente.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Falló la migración automática de base de datos.");
+        throw;
+    }
+}
+
 app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseCors("FrontendCorsPolicy");

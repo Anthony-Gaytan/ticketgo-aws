@@ -110,3 +110,34 @@ resource "aws_security_group" "rds_sg" {
     Name = "ticketgo-rds-sg"
   }
 }
+
+# ============================================================
+# SECURITY GROUP DE ELASTICACHE REDIS
+# ============================================================
+# Este grupo de seguridad protege el clúster de caché.
+# Solo permite conexiones Redis (puerto 6379) desde ECS Fargate.
+resource "aws_security_group" "redis_sg" {
+  name        = "ticketgo-redis-sg"
+  description = "Permite trafico Redis solo desde ECS"
+  vpc_id      = aws_vpc.ticketgo_vpc.id
+
+  ingress {
+    description     = "Redis desde ECS"
+    from_port       = 6379
+    to_port         = 6379
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs_sg.id]
+  }
+
+  egress {
+    description = "Salida permitida hacia cualquier destino"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "ticketgo-redis-sg"
+  }
+}

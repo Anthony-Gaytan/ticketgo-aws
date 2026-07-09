@@ -126,6 +126,90 @@ resource "aws_route_table_association" "public_az2" {
 }
 
 # ============================================================
+# ELASTIC IPs Y NAT GATEWAYS
+# ============================================================
+# Requeridos para que los contenedores ECS en subredes privadas
+# puedan salir a Internet a descargar las imágenes de ECR.
+# Habilita el tráfico saliente mientras bloquea el entrante.
+resource "aws_eip" "nat_az1" {
+  domain = "vpc"
+  tags = {
+    Name = "ticketgo-eip-nat-az1"
+  }
+}
+
+resource "aws_nat_gateway" "nat_az1" {
+  allocation_id = aws_eip.nat_az1.id
+  subnet_id     = aws_subnet.public_az1.id
+
+  tags = {
+    Name = "ticketgo-nat-az1"
+  }
+  depends_on = [aws_internet_gateway.ticketgo_igw]
+}
+
+resource "aws_eip" "nat_az2" {
+  domain = "vpc"
+  tags = {
+    Name = "ticketgo-eip-nat-az2"
+  }
+}
+
+resource "aws_nat_gateway" "nat_az2" {
+  allocation_id = aws_eip.nat_az2.id
+  subnet_id     = aws_subnet.public_az2.id
+
+  tags = {
+    Name = "ticketgo-nat-az2"
+  }
+  depends_on = [aws_internet_gateway.ticketgo_igw]
+}
+
+# ============================================================
+# TABLAS DE RUTAS PRIVADAS (APP)
+# ============================================================
+# Enrutan el tráfico de salida de las subredes privadas de app
+# hacia los NAT Gateways de su respectiva zona.
+resource "aws_route_table" "private_app_rt_az1" {
+  vpc_id = aws_vpc.ticketgo_vpc.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat_az1.id
+  }
+
+  tags = {
+    Name = "ticketgo-private-app-rt-az1"
+  }
+}
+
+resource "aws_route_table" "private_app_rt_az2" {
+  vpc_id = aws_vpc.ticketgo_vpc.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat_az2.id
+  }
+
+  tags = {
+    Name = "ticketgo-private-app-rt-az2"
+  }
+}
+
+# ============================================================
+# ASOCIACIONES DE TABLAS DE RUTAS PRIVADAS
+# ============================================================
+resource "aws_route_table_association" "private_app_az1" {
+  subnet_id      = aws_subnet.private_app_az1.id
+  route_table_id = aws_route_table.private_app_rt_az1.id
+}
+
+resource "aws_route_table_association" "private_app_az2" {
+  subnet_id      = aws_subnet.private_app_az2.id
+  route_table_id = aws_route_table.private_app_rt_az2.id
+}
+
+# ============================================================
 # SUBRED PRIVADA DE APLICACIÓN EN AZ-1
 # ============================================================
 # Esta subred alojará los contenedores ECS Fargate del backend.

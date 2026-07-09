@@ -90,6 +90,10 @@ resource "aws_ecs_task_definition" "ticketgo_api_task" {
         {
           name  = "AUTO_MIGRATE_DATABASE"
           value = var.auto_migrate_database
+        },
+        {
+          name  = "Redis__ConnectionString"
+          value = "${aws_elasticache_cluster.ticketgo_redis.cache_nodes[0].address}:${aws_elasticache_cluster.ticketgo_redis.cache_nodes[0].port}"
         }
       ]
 
@@ -113,11 +117,10 @@ resource "aws_ecs_task_definition" "ticketgo_api_task" {
 # ECS SERVICE - BACKEND TICKETGO
 # ============================================================
 # Ejecuta una tarea Fargate usando la imagen subida a ECR.
-# Para evitar NAT Gateway por ahora, se ejecuta temporalmente
-# en subredes públicas con IP pública.
+# Las tareas se ejecutan de forma segura en subredes privadas,
+# saliendo a Internet a través de los NAT Gateways de su zona.
 # El servicio se conecta al ALB a través del Target Group.
 resource "aws_ecs_service" "ticketgo_api_service" {
-  # checkov:skip=CKV_AWS_333:Para este ambiente de demo y desarrollo, la tarea ECS se despliega en subredes publicas con IP publica asignada para evitar el costo mensual de NAT Gateways (~$32/mes) que serian necesarios para acceder a Internet desde subredes privadas.
   name            = "ticketgo-api-service"
   cluster         = aws_ecs_cluster.ticketgo_cluster.id
   task_definition = aws_ecs_task_definition.ticketgo_api_task.arn
@@ -126,12 +129,12 @@ resource "aws_ecs_service" "ticketgo_api_service" {
 
   network_configuration {
     subnets = [
-      aws_subnet.public_az1.id,
-      aws_subnet.public_az2.id
+      aws_subnet.private_app_az1.id,
+      aws_subnet.private_app_az2.id
     ]
 
     security_groups  = [aws_security_group.ecs_sg.id]
-    assign_public_ip = true
+    assign_public_ip = false
   }
 
   load_balancer {
@@ -146,5 +149,42 @@ resource "aws_ecs_service" "ticketgo_api_service" {
 
   tags = {
     Name = "ticketgo-api-service"
+  }
+
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
+}
+
+# ============================================================
+# AUTO SCALING DE ECS
+# ============================================================
+# Configura el escalado automático de las tareas Fargate
+# según el uso de recursos para mantener el rendimiento y
+# optimizar costos.
+
+resource "aws_appautoscaling_target" "ecs_target" {
+  max_capacity       = 3
+  min_capacity       = 1
+  resource_id        = "service/${aws_ecs_cluster.ticketgo_cluster.name}/${aws_ecs_service.ticketgo_api_service.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
+}
+
+# Política de escalado: Target Tracking (CPU al 70%)
+resource "aws_appautoscaling_policy" "ecs_policy_cpu" {
+  name               = "ticketgo-cpu-autoscaling"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.ecs_target.resource_id
+  scalable_dimension = aws_appautoscaling_target.ecs_target.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.ecs_target.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+    target_value       = 70.0
+    scale_in_cooldown  = 300
+    scale_out_cooldown = 60
   }
 }

@@ -141,3 +141,17 @@ output "s3_bucket_name" {
   description = "Nombre del bucket S3 del frontend"
   value       = aws_s3_bucket.ticketgo_frontend.id
 }
+
+# ------------------------------------------------------------
+# IAM / CI-CD
+# ------------------------------------------------------------
+
+output "github_actions_role_arn" {
+  description = "ARN del rol OIDC de GitHub Actions. Copiar este valor como secreto AWS_ROLE_ARN en el repositorio de GitHub."
+  value       = aws_iam_role.github_actions_role.arn
+}
+
+output "cloudfront_distribution_id" {
+  description = "ID de la distribución CloudFront (necesario para invalidar caché en el deploy del frontend)"
+  value       = aws_cloudfront_distribution.ticketgo_cdn.id
+}

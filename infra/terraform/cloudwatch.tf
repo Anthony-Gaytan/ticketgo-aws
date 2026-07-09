@@ -93,3 +93,80 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   }
 }
 
+# ============================================================
+# CLOUDWATCH DASHBOARD
+# ============================================================
+# Panel centralizado para visualizar las métricas clave de la
+# infraestructura. Especialmente útil para la presentación.
+resource "aws_cloudwatch_dashboard" "ticketgo_dashboard" {
+  dashboard_name = "ticketgo-dashboard"
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "metric"
+        x      = 0
+        y      = 0
+        width  = 12
+        height = 6
+        properties = {
+          metrics = [
+            ["AWS/ECS", "CPUUtilization", "ServiceName", aws_ecs_service.ticketgo_api_service.name, "ClusterName", aws_ecs_cluster.ticketgo_cluster.name]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = var.aws_region
+          title   = "ECS CPU Utilization"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 12
+        y      = 0
+        width  = 12
+        height = 6
+        properties = {
+          metrics = [
+            ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", aws_db_instance.ticketgo_db.identifier]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = var.aws_region
+          title   = "RDS Database Connections"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 0
+        y      = 6
+        width  = 12
+        height = 6
+        properties = {
+          metrics = [
+            ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", aws_sqs_queue.ticketgo_notifications_dlq.name]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = var.aws_region
+          title   = "SQS DLQ Messages"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 12
+        y      = 6
+        width  = 12
+        height = 6
+        properties = {
+          metrics = [
+            ["AWS/Lambda", "Errors", "FunctionName", aws_lambda_function.ticketgo_notification_processor.function_name]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = var.aws_region
+          title   = "Lambda Errors"
+        }
+      }
+    ]
+  })
+}

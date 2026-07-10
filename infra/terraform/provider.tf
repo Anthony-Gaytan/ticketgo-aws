@@ -35,9 +35,9 @@ terraform {
   # Los valores están escritos directamente aquí de forma intencional.
   # ============================================================
   backend "s3" {
-    bucket         = "ticketgo-terraform-state-329871097383"
-    key            = "terraform/ticketgo.tfstate"
-    region         = "us-east-2"
+    bucket = "ticketgo-terraform-state-329871097383-us-east-2"
+    key    = "terraform/ticketgo.tfstate"
+    region = "us-east-2"
     # profile        = "anthony-admi" # Comentado para soportar múltiples perfiles en el equipo
     dynamodb_table = "ticketgo-terraform-locks"
     encrypt        = true
@@ -48,7 +48,7 @@ terraform {
 # PROVIDER PRINCIPAL - REGIÓN DEL PROYECTO
 # ============================================================
 provider "aws" {
-  region  = var.aws_region
+  region = var.aws_region
   # profile se define solo en local (via terraform.tfvars).
   # En GitHub Actions con OIDC se omite (null) para usar las credenciales del entorno.
   profile = var.aws_profile
@@ -69,8 +69,8 @@ provider "aws" {
 # us-east-1. Este provider alias permite crear recursos en
 # esa región sin afectar el resto de la infraestructura.
 provider "aws" {
-  alias   = "us_east_1"
-  region  = "us-east-1"
+  alias  = "us_east_1"
+  region = "us-east-1"
   # profile se define solo en local (via terraform.tfvars).
   # En GitHub Actions con OIDC se omite (null) para usar las credenciales del entorno.
   profile = var.aws_profile

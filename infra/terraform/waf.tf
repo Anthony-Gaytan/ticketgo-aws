@@ -20,6 +20,7 @@
 # por AWS contra los ataques más comunes del OWASP Top 10.
 resource "aws_wafv2_web_acl" "ticketgo_waf" {
   # checkov:skip=CKV2_AWS_31:Para un ambiente de demo, el registro de logs detallado de WAFv2 (Logging Configuration) esta desactivado para evitar altos costos de transferencia y almacenamiento de logs de peticiones HTTP en CloudWatch.
+  count    = var.enable_cloudfront && var.enable_waf ? 1 : 0
   provider = aws.us_east_1
   name     = "ticketgo-waf"
   scope    = "CLOUDFRONT"

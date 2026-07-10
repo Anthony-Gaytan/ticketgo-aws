@@ -8,16 +8,16 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copiamos el archivo del proyecto
-COPY *.csproj .
+COPY TicketGo.Api/TicketGo.Api.csproj TicketGo.Api/
 
 # Restauramos dependencias
-RUN dotnet restore
+RUN dotnet restore TicketGo.Api/TicketGo.Api.csproj
 
 # Copiamos el resto del código fuente
 COPY . .
 
 # Publicamos la aplicación
-RUN dotnet publish -c Release -o /app/publish
+RUN dotnet publish TicketGo.Api/TicketGo.Api.csproj -c Release -o /app/publish
 
 # ============================================================
 # ETAPA 2 - RUNTIME

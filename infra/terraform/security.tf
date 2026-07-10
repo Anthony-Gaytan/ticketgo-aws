@@ -129,14 +129,6 @@ resource "aws_security_group" "redis_sg" {
     security_groups = [aws_security_group.ecs_sg.id]
   }
 
-  egress {
-    description = "Salida permitida hacia cualquier destino"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   tags = {
     Name = "ticketgo-redis-sg"
   }

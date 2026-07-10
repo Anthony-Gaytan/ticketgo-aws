@@ -88,6 +88,10 @@ resource "aws_ecs_task_definition" "ticketgo_api_task" {
           value = aws_sqs_queue.ticketgo_notifications.url
         },
         {
+          name  = "AUTO_MIGRATE_DATABASE"
+          value = var.auto_migrate_database
+        },
+        {
           name  = "Redis__ConnectionString"
           value = "${aws_elasticache_cluster.ticketgo_redis.cache_nodes[0].address}:${aws_elasticache_cluster.ticketgo_redis.cache_nodes[0].port}"
         }
@@ -120,7 +124,7 @@ resource "aws_ecs_service" "ticketgo_api_service" {
   name            = "ticketgo-api-service"
   cluster         = aws_ecs_cluster.ticketgo_cluster.id
   task_definition = aws_ecs_task_definition.ticketgo_api_task.arn
-  desired_count   = 1
+  desired_count   = var.ecs_desired_count
   launch_type     = "FARGATE"
 
   network_configuration {
@@ -161,7 +165,7 @@ resource "aws_ecs_service" "ticketgo_api_service" {
 
 resource "aws_appautoscaling_target" "ecs_target" {
   max_capacity       = 3
-  min_capacity       = 1
+  min_capacity       = var.ecs_desired_count
   resource_id        = "service/${aws_ecs_cluster.ticketgo_cluster.name}/${aws_ecs_service.ticketgo_api_service.name}"
   scalable_dimension = "ecs:service:DesiredCount"
   service_namespace  = "ecs"

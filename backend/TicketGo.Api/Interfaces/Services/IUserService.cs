@@ -1,6 +1,6 @@
 using TicketGo.Api.DTOs.Users;
 
-namespace TicketGo.Api.Interfaces;
+namespace TicketGo.Api.Interfaces.Services;
 
 public interface IUserService
 {
@@ -9,4 +9,10 @@ public interface IUserService
     Task<UserResponseDto?> GetByIdAsync(Guid id);
 
     Task<UserResponseDto> CreateAsync(CreateUserDto request);
+
+    Task<UserMeResponseDto> GetMeAsync(Guid userId);
+
+    Task<UserMeResponseDto> UpdateMeAsync(Guid userId, UpdateMyProfileDto request);
+
+    Task<bool> ChangePasswordAsync(Guid userId, ChangePasswordDto request);
 }

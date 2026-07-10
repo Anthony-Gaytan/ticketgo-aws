@@ -1,4 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using TicketGo.Api.Data;
 using TicketGo.Api.DTOs.Events;
@@ -16,15 +20,22 @@ public class EventService : IEventService
         _context = context;
     }
 
-    public async Task<List<EventResponseDto>> GetAllAsync()
+    public async Task<List<EventResponseDto>> GetAllAsync(ClaimsPrincipal? user = null)
     {
-        return await _context.Events
+        var events = await _context.Events
             .Where(e => !e.IsDeleted)
-            .Select(e => MapToResponse(e))
             .ToListAsync();
+
+        var response = new List<EventResponseDto>();
+        foreach (var ev in events)
+        {
+            response.Add(await MapToResponseAsync(ev, user));
+        }
+
+        return response;
     }
 
-    public async Task<EventResponseDto> GetByIdAsync(Guid id)
+    public async Task<EventResponseDto> GetByIdAsync(Guid id, ClaimsPrincipal? user = null)
     {
         var existingEvent = await _context.Events
             .FirstOrDefaultAsync(e => e.Id == id && !e.IsDeleted);
@@ -32,14 +43,21 @@ public class EventService : IEventService
         if (existingEvent == null)
             throw new KeyNotFoundException("Evento no encontrado.");
 
-        return MapToResponse(existingEvent);
+        return await MapToResponseAsync(existingEvent, user);
     }
 
     public async Task<EventResponseDto> CreateAsync(CreateEventDto request, ClaimsPrincipal user)
     {
         var organizerId = GetUserIdFromClaims(user);
+        var userRole = user.FindFirst(ClaimTypes.Role)?.Value;
 
         ValidateEventDatesAndCapacity(request.StartDate, request.EndDate, request.Capacity);
+
+        var status = !string.IsNullOrWhiteSpace(request.Status) ? request.Status : "Draft";
+        if (userRole == "Organizer")
+        {
+            status = "PendingReview"; // Force PendingReview for organizers
+        }
 
         var newEvent = new Event
         {
@@ -53,7 +71,7 @@ public class EventService : IEventService
             EndDate = request.EndDate,
             Capacity = request.Capacity,
             OrganizerId = organizerId,
-            Status = !string.IsNullOrWhiteSpace(request.Status) ? request.Status : "Draft",
+            Status = status,
             ImageUrl = request.ImageUrl,
             CreatedAt = DateTime.UtcNow
         };
@@ -61,7 +79,7 @@ public class EventService : IEventService
         _context.Events.Add(newEvent);
         await _context.SaveChangesAsync();
 
-        return MapToResponse(newEvent);
+        return await MapToResponseAsync(newEvent, user);
     }
 
     public async Task<EventResponseDto> UpdateAsync(Guid id, UpdateEventDto request, ClaimsPrincipal user)
@@ -72,6 +90,23 @@ public class EventService : IEventService
         if (existingEvent == null)
             throw new KeyNotFoundException("Evento no encontrado.");
 
+        var userRole = user.FindFirst(ClaimTypes.Role)?.Value;
+        var userId = GetUserIdFromClaims(user);
+
+        // Organizer specific rules
+        if (userRole == "Organizer")
+        {
+            if (existingEvent.OrganizerId != userId)
+                throw new UnauthorizedAccessException("No tienes permisos para editar este evento.");
+
+            var editableStatuses = new[] { "Draft", "PendingReview", "Rejected", "OnHold" };
+            if (!editableStatuses.Contains(existingEvent.Status))
+                throw new InvalidOperationException($"No se puede editar el evento en su estado actual: {existingEvent.Status}.");
+
+            if (request.Status == "Published")
+                throw new InvalidOperationException("Un Organizador no puede publicar eventos directamente.");
+        }
+
         ValidateEventDatesAndCapacity(request.StartDate, request.EndDate, request.Capacity);
 
         if (existingEvent.Status == "Cancelled")
@@ -79,6 +114,12 @@ public class EventService : IEventService
 
         if (existingEvent.TicketsSold > request.Capacity)
             throw new InvalidOperationException("La nueva capacidad no puede ser menor a los tickets vendidos.");
+
+        // If the request attempts to transition to Cancelled
+        if (request.Status == "Cancelled" && await HasCommercialActivityAsync(id))
+        {
+            throw new InvalidOperationException("No se puede cancelar el evento porque ya tiene entradas vendidas.");
+        }
 
         existingEvent.Title = request.Title;
         existingEvent.Description = request.Description;
@@ -90,15 +131,17 @@ public class EventService : IEventService
         existingEvent.EndDate = request.EndDate;
         existingEvent.Capacity = request.Capacity;
         existingEvent.ImageUrl = request.ImageUrl;
+        
         if (!string.IsNullOrWhiteSpace(request.Status))
         {
             existingEvent.Status = request.Status;
         }
+        
         existingEvent.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
 
-        return MapToResponse(existingEvent);
+        return await MapToResponseAsync(existingEvent, user);
     }
 
     public async Task DeleteAsync(Guid id, ClaimsPrincipal user)
@@ -109,8 +152,14 @@ public class EventService : IEventService
         if (existingEvent == null)
             throw new KeyNotFoundException("Evento no encontrado.");
 
-        if (existingEvent.TicketsSold > 0)
-            throw new InvalidOperationException("No se puede eliminar un evento con tickets vendidos.");
+        var userRole = user.FindFirst(ClaimTypes.Role)?.Value;
+        var userId = GetUserIdFromClaims(user);
+
+        if (userRole == "Organizer" && existingEvent.OrganizerId != userId)
+            throw new UnauthorizedAccessException("No tienes permisos para eliminar este evento.");
+
+        if (await HasCommercialActivityAsync(id))
+            throw new InvalidOperationException("No se puede eliminar el evento porque ya tiene entradas vendidas o actividad comercial.");
 
         existingEvent.IsDeleted = true;
         existingEvent.UpdatedAt = DateTime.UtcNow;
@@ -120,6 +169,10 @@ public class EventService : IEventService
 
     public async Task<EventResponseDto> PublishAsync(Guid id, ClaimsPrincipal user)
     {
+        var userRole = user.FindFirst(ClaimTypes.Role)?.Value;
+        if (userRole != "Admin")
+            throw new UnauthorizedAccessException("Solo los Administradores pueden publicar eventos.");
+
         var existingEvent = await _context.Events
             .FirstOrDefaultAsync(e => e.Id == id && !e.IsDeleted);
 
@@ -137,7 +190,7 @@ public class EventService : IEventService
 
         await _context.SaveChangesAsync();
 
-        return MapToResponse(existingEvent);
+        return await MapToResponseAsync(existingEvent, user);
     }
 
     public async Task<EventResponseDto> CancelAsync(Guid id, ClaimsPrincipal user)
@@ -148,19 +201,72 @@ public class EventService : IEventService
         if (existingEvent == null)
             throw new KeyNotFoundException("Evento no encontrado.");
 
+        var userRole = user.FindFirst(ClaimTypes.Role)?.Value;
+        var userId = GetUserIdFromClaims(user);
+
+        if (userRole == "Organizer" && existingEvent.OrganizerId != userId)
+            throw new UnauthorizedAccessException("No tienes permisos para cancelar este evento.");
+
         if (existingEvent.Status == "Finished")
             throw new InvalidOperationException("No se puede cancelar un evento finalizado.");
+
+        if (await HasCommercialActivityAsync(id))
+            throw new InvalidOperationException("No se puede cancelar el evento porque ya tiene entradas vendidas.");
 
         existingEvent.Status = "Cancelled";
         existingEvent.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
 
-        return MapToResponse(existingEvent);
+        return await MapToResponseAsync(existingEvent, user);
     }
 
-    private static EventResponseDto MapToResponse(Event e)
+    private async Task<bool> HasCommercialActivityAsync(Guid eventId)
     {
+        // 1. Check if tickets sold is > 0 on entity
+        var ev = await _context.Events.FirstOrDefaultAsync(e => e.Id == eventId);
+        if (ev != null && ev.TicketsSold > 0) return true;
+
+        // 2. Check if there are tickets generated for the event
+        var hasTickets = await _context.Tickets.AnyAsync(t => t.EventId == eventId);
+        if (hasTickets) return true;
+
+        // 3. Check if there are order details associated with the event's ticket types
+        var hasOrderDetails = await _context.OrderDetails
+            .AnyAsync(od => od.EventTicketType.EventId == eventId);
+        if (hasOrderDetails) return true;
+
+        return false;
+    }
+
+    private async Task<EventResponseDto> MapToResponseAsync(Event e, ClaimsPrincipal? user = null)
+    {
+        var hasActivity = await HasCommercialActivityAsync(e.Id);
+        
+        var canCancel = e.Status != "Cancelled" && e.Status != "Finished" && !hasActivity;
+        var canDelete = !hasActivity;
+        
+        bool canEdit = false;
+        bool canPublish = false;
+        
+        if (user != null)
+        {
+            var userRole = user.FindFirst(ClaimTypes.Role)?.Value;
+            var userIdStr = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (userRole == "Admin")
+            {
+                canEdit = e.Status != "Cancelled" && e.Status != "Finished";
+                canPublish = e.Status == "Draft" || e.Status == "PendingReview" || e.Status == "OnHold";
+            }
+            else if (userRole == "Organizer" && Guid.TryParse(userIdStr, out var userId))
+            {
+                canEdit = e.OrganizerId == userId && 
+                           (e.Status == "Draft" || e.Status == "PendingReview" || e.Status == "Rejected" || e.Status == "OnHold");
+                canPublish = false; // Organizers cannot publish directly
+            }
+        }
+
         return new EventResponseDto
         {
             Id = e.Id,
@@ -177,7 +283,12 @@ public class EventService : IEventService
             Status = e.Status,
             OrganizerId = e.OrganizerId,
             ImageUrl = e.ImageUrl,
-            CreatedAt = e.CreatedAt
+            CreatedAt = e.CreatedAt,
+            HasCommercialActivity = hasActivity,
+            CanCancel = canCancel,
+            CanDelete = canDelete,
+            CanEdit = canEdit,
+            CanPublish = canPublish
         };
     }
 

@@ -21,6 +21,14 @@ export const apiClient = {
     });
   },
 
+  async patch(endpoint, body = null, options = {}) {
+    return this.request(endpoint, {
+      ...options,
+      method: 'PATCH',
+      body: body ? JSON.stringify(body) : null,
+    });
+  },
+
   async delete(endpoint, options = {}) {
     return this.request(endpoint, { ...options, method: 'DELETE' });
   },

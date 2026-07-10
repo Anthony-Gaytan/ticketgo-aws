@@ -1,0 +1,109 @@
+﻿TicketGo AWS cleanup verification
+Generated: 2026-07-09T02:18:03.5194754-05:00
+Profile: anthony-admi
+Primary region: us-east-2
+Allowed remote backend resources: ticketgo-terraform-state-329871097383-us-east-2, ticketgo-terraform-locks
+
+## RDS instances with ticketgo in identifier
+[]
+
+## NAT Gateways with tag Project=ticketgo
+[
+    {
+        "NatGatewayId": "nat-0854f25ed2d38600f",
+        "State": "deleted",
+        "SubnetId": "subnet-09e24519aff088064",
+        "VpcId": "vpc-0b3ba9a78f55ec796",
+        "PublicIp": "3.21.119.234"
+    },
+    {
+        "NatGatewayId": "nat-0ed2d7f768c89f01e",
+        "State": "deleted",
+        "SubnetId": "subnet-03189fd7c3de5dcab",
+        "VpcId": "vpc-0b3ba9a78f55ec796",
+        "PublicIp": "3.22.243.136"
+    }
+]
+
+## Load Balancers with ticketgo in name
+[]
+
+## ElastiCache clusters with ticketgo in id
+[]
+
+## ECS clusters with ticketgo in ARN
+[]
+
+## ECR repositories with ticketgo in name
+[]
+
+## S3 buckets with ticketgo in name (global)
+[
+    {
+        "Name": "ticketgo-terraform-state-329871097383-us-east-2",
+        "CreationDate": "2026-07-09T06:26:35+00:00"
+    }
+]
+
+## DynamoDB tables with ticketgo in name
+[
+    "ticketgo-terraform-locks"
+]
+
+## Secrets Manager secrets with ticketgo in name
+[]
+
+## Lambda functions with ticketgo in name
+[]
+
+## SQS queues with ticketgo prefix
+[]
+
+## CloudWatch log groups containing ticketgo
+[
+    {
+        "Name": "/aws/rds/instance/ticketgo-db/postgresql",
+        "StoredBytes": 0,
+        "Retention": null
+    }
+]
+
+## VPCs with tag Project=ticketgo
+[]
+
+## Subnets with tag Project=ticketgo
+[]
+
+## Route tables with tag Project=ticketgo
+[]
+
+## Internet gateways with tag Project=ticketgo
+[]
+
+## Security groups with tag Project=ticketgo
+[]
+
+## Elastic IPs with tag Project=ticketgo
+[]
+
+## Backup vaults with ticketgo in name
+[]
+
+## Backup plans with ticketgo in name
+[]
+
+## KMS aliases with ticketgo in alias name
+[]
+
+## SES identities related to ticketgo
+[]
+
+## CloudFront distributions related to ticketgo
+[]
+
+## WAFv2 CloudFront Web ACLs with ticketgo in name (us-east-1/global scope)
+[]
+
+## WAFv2 Regional Web ACLs with ticketgo in name
+[]
+

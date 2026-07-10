@@ -38,7 +38,7 @@ resource "aws_lambda_function" "ticketgo_notification_processor" {
 
   timeout                        = var.lambda_timeout
   memory_size                    = var.lambda_memory
-  reserved_concurrent_executions = 5
+  reserved_concurrent_executions = var.enable_lambda_reserved_concurrency ? 5 : null
 
   tracing_config {
     mode = "Active"

@@ -20,7 +20,7 @@
 resource "aws_elasticache_subnet_group" "ticketgo_redis_subnet_group" {
   name        = "ticketgo-redis-subnet-group"
   description = "Subredes privadas de datos para ElastiCache Redis"
-  
+
   subnet_ids = [
     aws_subnet.private_data_az1.id,
     aws_subnet.private_data_az2.id
@@ -39,11 +39,11 @@ resource "aws_elasticache_cluster" "ticketgo_redis" {
   engine_version       = "7.1"
   port                 = 6379
 
-  subnet_group_name    = aws_elasticache_subnet_group.ticketgo_redis_subnet_group.name
-  security_group_ids   = [aws_security_group.redis_sg.id]
+  subnet_group_name  = aws_elasticache_subnet_group.ticketgo_redis_subnet_group.name
+  security_group_ids = [aws_security_group.redis_sg.id]
 
-  # Para reducir tiempo de creación en demo, deshabilitamos snapshot automático
-  snapshot_retention_limit = 0
+  # Retención mínima para habilitar backups automáticos sin elevar demasiado el costo de la demo.
+  snapshot_retention_limit = 1
 
   tags = {
     Name = "ticketgo-redis"

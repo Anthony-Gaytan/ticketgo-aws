@@ -46,35 +46,7 @@ Plataforma de venta y distribución de entradas para eventos masivos, desarrolla
 
 El siguiente diagrama detalla la arquitectura de nube e integración de servicios:
 
-```mermaid
-graph TD
-    Client[Cliente / Navegador Web] -->|HTTPS| CF[Amazon CloudFront CDN]
-    CF -->|Frontend Estático| S3[Amazon S3 Bucket]
-    
-    Client -->|API Requests - HTTPS| WAF[AWS WAF]
-    WAF --> ALB[Application Load Balancer]
-    ALB -->|HTTP:8080| ECS[ECS Fargate - TicketGo API]
-    
-    %% Base de datos e integración
-    ECS -->|EF Core / SQL| RDS[(RDS PostgreSQL Instance)]
-    ECS -->|Mensaje de Compra| SQS[Amazon SQS Queue]
-    
-    %% Procesamiento Serverless
-    SQS -->|Trigger Asíncrono| Lambda[AWS Lambda Notification Processor]
-    Lambda -->|Envío de Correo + QR| SES[Amazon SES]
-    
-    %% Seguridad y Observabilidad
-    Secrets[AWS Secrets Manager] -.->|Inyectar Credenciales| ECS
-    Backup[AWS Backup] -.->|Copias de Seguridad Diarias| RDS
-    CW[Amazon CloudWatch Logs] -.->|Log Groups / Métricas| ECS
-    CW -.->|Log Groups / Métricas| Lambda
-    
-    style Client fill:#f9f,stroke:#333,stroke-width:2px
-    style CF fill:#ff9900,stroke:#333,stroke-width:2px,color:#fff
-    style ECS fill:#ff9900,stroke:#333,stroke-width:2px,color:#fff
-    style RDS fill:#ff9900,stroke:#333,stroke-width:2px,color:#fff
-    style Lambda fill:#ff9900,stroke:#333,stroke-width:2px,color:#fff
-```
+![Arquitectura AWS de TicketGo Perú](docs/images/ticketgo-aws-architecture.jpg)
 
 ---
 

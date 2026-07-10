@@ -20,7 +20,7 @@ public class EventsController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetAll()
     {
-        var events = await _eventService.GetAllAsync();
+        var events = await _eventService.GetAllAsync(User);
         return Ok(events);
     }
 
@@ -28,7 +28,7 @@ public class EventsController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetById(Guid id)
     {
-        var eventDetail = await _eventService.GetByIdAsync(id);
+        var eventDetail = await _eventService.GetByIdAsync(id, User);
         return Ok(eventDetail);
     }
 

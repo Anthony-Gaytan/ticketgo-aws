@@ -1,10 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TicketGo.Api.Data;
 using TicketGo.Api.DTOs.Users;
-using TicketGo.Api.Entities;
+using TicketGo.Api.Interfaces.Services;
 
 namespace TicketGo.Api.Controllers;
 
@@ -13,28 +11,18 @@ namespace TicketGo.Api.Controllers;
 [Authorize]
 public class UsersController : ControllerBase
 {
-    private readonly TicketGoDbContext _context;
+    private readonly IUserService _userService;
 
-    public UsersController(TicketGoDbContext context)
+    public UsersController(IUserService userService)
     {
-        _context = context;
+        _userService = userService;
     }
 
     [HttpGet]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetAll()
     {
-        var users = await _context.Users
-            .Select(u => new UserResponseDto
-            {
-                Id = u.Id,
-                FullName = u.FullName,
-                Email = u.Email,
-                Role = u.Role,
-                CreatedAt = u.CreatedAt
-            })
-            .ToListAsync();
-
+        var users = await _userService.GetAllAsync();
         return Ok(users);
     }
 
@@ -42,18 +30,7 @@ public class UsersController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetById(Guid id)
     {
-        var user = await _context.Users
-            .Where(u => u.Id == id)
-            .Select(u => new UserResponseDto
-            {
-                Id = u.Id,
-                FullName = u.FullName,
-                Email = u.Email,
-                Role = u.Role,
-                CreatedAt = u.CreatedAt
-            })
-            .FirstOrDefaultAsync();
-
+        var user = await _userService.GetByIdAsync(id);
         if (user == null)
             return NotFound("Usuario no encontrado.");
 
@@ -64,29 +41,15 @@ public class UsersController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create([FromBody] CreateUserDto request)
     {
-        if (await _context.Users.AnyAsync(u => u.Email == request.Email))
-            return BadRequest("Ya existe un usuario con ese correo.");
-
-        var user = new User
+        try
         {
-            FullName = request.FullName,
-            Email = request.Email,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync();
-
-        var response = new UserResponseDto
+            var response = await _userService.CreateAsync(request);
+            return CreatedAtAction(nameof(GetById), new { id = response.Id }, response);
+        }
+        catch (InvalidOperationException ex)
         {
-            Id = user.Id,
-            FullName = user.FullName,
-            Email = user.Email,
-            Role = user.Role,
-            CreatedAt = user.CreatedAt
-        };
-
-        return CreatedAtAction(nameof(GetById), new { id = user.Id }, response);
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpGet("me")]
@@ -97,21 +60,15 @@ public class UsersController : ControllerBase
             return Unauthorized("Usuario no autenticado o token inválido.");
 
         var userId = Guid.Parse(userIdClaim);
-        var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == userId);
-
-        if (user == null)
-            return NotFound("Usuario no encontrado.");
-
-        var response = new UserMeResponseDto
+        try
         {
-            Id = user.Id,
-            FullName = user.FullName,
-            Email = user.Email,
-            Role = user.Role
-        };
-
-        return Ok(response);
+            var response = await _userService.GetMeAsync(userId);
+            return Ok(response);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound("Usuario no encontrado.");
+        }
     }
 
     [HttpPut("me")]
@@ -122,34 +79,23 @@ public class UsersController : ControllerBase
             return Unauthorized("Usuario no autenticado o token inválido.");
 
         var userId = Guid.Parse(userIdClaim);
-        
-        if (string.IsNullOrWhiteSpace(request.FullName) || string.IsNullOrWhiteSpace(request.Email))
-            return BadRequest("Nombre completo y correo electrónico son obligatorios.");
-
-        var existingUser = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == userId);
-
-        if (existingUser == null)
-            return NotFound("Usuario no encontrado.");
-
-        // Check if the new email is already used by another user (excluding current user)
-        if (existingUser.Email != request.Email && await _context.Users.AnyAsync(u => u.Email == request.Email))
-            return BadRequest("El correo electrónico ya está en uso por otro usuario.");
-
-        existingUser.FullName = request.FullName;
-        existingUser.Email = request.Email;
-
-        await _context.SaveChangesAsync();
-
-        var response = new UserMeResponseDto
+        try
         {
-            Id = existingUser.Id,
-            FullName = existingUser.FullName,
-            Email = existingUser.Email,
-            Role = existingUser.Role
-        };
-
-        return Ok(response);
+            var response = await _userService.UpdateMeAsync(userId, request);
+            return Ok(response);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound("Usuario no encontrado.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPut("me/password")]
@@ -160,37 +106,22 @@ public class UsersController : ControllerBase
             return Unauthorized("Usuario no autenticado o token inválido.");
 
         var userId = Guid.Parse(userIdClaim);
-
-        if (string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
-            return BadRequest("Todos los campos de contraseña son obligatorios.");
-
-        if (request.NewPassword != request.ConfirmPassword)
-            return BadRequest("Las contraseñas nuevas no coinciden.");
-
-        // Validate strong password requirements
-        if (request.NewPassword.Length < 8 ||
-            !request.NewPassword.Any(char.IsUpper) ||
-            !request.NewPassword.Any(char.IsLower) ||
-            !request.NewPassword.Any(char.IsDigit) ||
-            !request.NewPassword.Any(ch => !char.IsLetterOrDigit(ch)))
+        try
         {
-            return BadRequest("La nueva contraseña debe tener un mínimo de 8 caracteres, al menos una letra mayúscula, una letra minúscula, un número y un carácter especial (símbolo).");
+            await _userService.ChangePasswordAsync(userId, request);
+            return Ok(new { message = "Contraseña actualizada correctamente." });
         }
-
-        var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == userId);
-
-        if (user == null)
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (KeyNotFoundException)
+        {
             return NotFound("Usuario no encontrado.");
-
-        // Verify current password
-        if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
-            return BadRequest("La contraseña actual es incorrecta.");
-
-        // Hash and update new password
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
-        await _context.SaveChangesAsync();
-
-        return Ok(new { message = "Contraseña actualizada correctamente." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 }

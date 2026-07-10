@@ -753,26 +753,27 @@ export const AdminDashboard = () => {
                                     <Eye size={12} />
                                   </button>
 
-                                  {/* Organizer Action: Edit only if not published */}
+                                  {/* Organizer Action: Edit only if editable */}
                                   {user?.role === 'Organizer' && (
                                     <button 
                                       onClick={() => openEditEvent(e)}
                                       className="btn btn-secondary" 
                                       style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem', gap: '0.25rem' }}
-                                      disabled={isPublished}
-                                      title={isPublished ? "No se pueden editar eventos publicados" : "Editar Evento"}
+                                      disabled={!e.canEdit}
+                                      title={!e.canEdit ? "No se puede editar este evento en su estado actual" : "Editar Evento"}
                                     >
                                       <Edit size={12} />
                                     </button>
                                   )}
 
-                                  {/* Organizer Action: Cancel if published */}
+                                  {/* Organizer Action: Cancel if published and cancelable */}
                                   {user?.role === 'Organizer' && isPublished && (
                                     <button 
                                       onClick={() => handleCancelEvent(e.id)}
                                       className="btn btn-danger" 
                                       style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem', gap: '0.25rem', color: '#fff', border: 'none' }}
-                                      title="Cancelar Evento"
+                                      disabled={!e.canCancel}
+                                      title={!e.canCancel ? "No disponible porque el evento ya tiene ventas." : "Cancelar Evento"}
                                     >
                                       <XCircle size={12} />
                                     </button>
@@ -785,7 +786,8 @@ export const AdminDashboard = () => {
                                         onClick={() => openEditEvent(e)}
                                         className="btn btn-secondary" 
                                         style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem' }}
-                                        title="Editar Evento"
+                                        disabled={!e.canEdit}
+                                        title={!e.canEdit ? "No se puede editar este evento en su estado actual" : "Editar Evento"}
                                       >
                                         <Edit size={12} />
                                       </button>
@@ -795,7 +797,8 @@ export const AdminDashboard = () => {
                                           onClick={() => handlePublishEvent(e.id)}
                                           className="btn btn-primary" 
                                           style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem', backgroundColor: 'var(--success)', borderColor: 'var(--success)' }}
-                                          title="Aprobar y Publicar"
+                                          disabled={!e.canPublish}
+                                          title={!e.canPublish ? "No disponible en este estado" : "Aprobar y Publicar"}
                                         >
                                           <Play size={12} />
                                         </button>
@@ -828,7 +831,8 @@ export const AdminDashboard = () => {
                                           onClick={() => handleCancelEvent(e.id)}
                                           className="btn btn-danger" 
                                           style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem', color: '#fff', border: 'none', backgroundColor: '#e11d48' }}
-                                          title="Cancelar Evento"
+                                          disabled={!e.canCancel}
+                                          title={!e.canCancel ? "No disponible porque el evento ya tiene ventas." : "Cancelar Evento"}
                                         >
                                           <Archive size={12} />
                                         </button>
@@ -838,7 +842,8 @@ export const AdminDashboard = () => {
                                         onClick={() => handleDeleteEvent(e.id)}
                                         className="btn btn-danger" 
                                         style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem', color: '#fff', border: 'none' }}
-                                        title="Eliminar Evento"
+                                        disabled={!e.canDelete}
+                                        title={!e.canDelete ? "No disponible porque el evento ya tiene ventas." : "Eliminar Evento"}
                                       >
                                         <Trash2 size={12} />
                                       </button>

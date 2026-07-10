@@ -31,4 +31,10 @@ public class EventResponseDto
     public DateTime CreatedAt { get; set; }
 
     public string? ImageUrl { get; set; }
+
+    public bool HasCommercialActivity { get; set; }
+    public bool CanCancel { get; set; }
+    public bool CanDelete { get; set; }
+    public bool CanEdit { get; set; }
+    public bool CanPublish { get; set; }
 }

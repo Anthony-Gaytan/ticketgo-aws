@@ -21,6 +21,7 @@
 # Permite que CloudFront acceda al bucket S3 de forma segura
 # sin necesidad de hacer público el bucket.
 resource "aws_cloudfront_origin_access_control" "ticketgo_oac" {
+  count                             = var.enable_cloudfront ? 1 : 0
   name                              = "ticketgo-oac"
   description                       = "OAC para acceso seguro de CloudFront a S3"
   origin_access_control_origin_type = "s3"
@@ -34,6 +35,7 @@ resource "aws_cloudfront_origin_access_control" "ticketgo_oac" {
 # Define cabeceras de seguridad HTTP para mitigar ataques como
 # clickjacking, XSS, sniffing de contenido, etc.
 resource "aws_cloudfront_response_headers_policy" "security_headers" {
+  count   = var.enable_cloudfront ? 1 : 0
   name    = "ticketgo-security-headers-policy"
   comment = "Politica de seguridad de cabeceras HTTP para Ticketgo"
 
@@ -69,6 +71,7 @@ resource "aws_cloudfront_response_headers_policy" "security_headers" {
 # Sirve el frontend React desde S3 con caché global,
 # HTTPS automático y protección WAF.
 resource "aws_cloudfront_distribution" "ticketgo_cdn" {
+  count = var.enable_cloudfront ? 1 : 0
   # checkov:skip=CKV_AWS_310:En este ambiente demo, la aplicacion cuenta con un unico origen (S3) y no requiere redundancia/failover con otro bucket u origen secundario.
   # checkov:skip=CKV_AWS_174:En el ambiente demo, se utiliza el certificado SSL por defecto de CloudFront (*.cloudfront.net) el cual por limitaciones de AWS no permite forzar una version minima superior de TLS (como TLS v1.2) sin configurar un dominio y certificado personalizado.
   # checkov:skip=CKV_AWS_374:Para este ambiente demo y desarrollo, la distribucion debe estar disponible globalmente sin restricciones geograficas de acceso.
@@ -79,13 +82,13 @@ resource "aws_cloudfront_distribution" "ticketgo_cdn" {
   is_ipv6_enabled     = true
   default_root_object = "index.html"
   price_class         = "PriceClass_100"
-  web_acl_id          = aws_wafv2_web_acl.ticketgo_waf.arn
+  web_acl_id          = var.enable_waf ? aws_wafv2_web_acl.ticketgo_waf[0].arn : null
 
   # Origen: S3 Bucket del frontend
   origin {
     domain_name              = aws_s3_bucket.ticketgo_frontend.bucket_regional_domain_name
     origin_id                = "S3-ticketgo-frontend"
-    origin_access_control_id = aws_cloudfront_origin_access_control.ticketgo_oac.id
+    origin_access_control_id = aws_cloudfront_origin_access_control.ticketgo_oac[0].id
   }
 
   # Comportamiento por defecto para archivos estáticos
@@ -94,7 +97,7 @@ resource "aws_cloudfront_distribution" "ticketgo_cdn" {
     cached_methods             = ["GET", "HEAD"]
     target_origin_id           = "S3-ticketgo-frontend"
     viewer_protocol_policy     = "redirect-to-https"
-    response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers.id
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers[0].id
 
     forwarded_values {
       query_string = false

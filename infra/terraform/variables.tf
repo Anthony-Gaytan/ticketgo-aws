@@ -100,6 +100,12 @@ variable "lambda_timeout" {
   default     = 10
 }
 
+variable "enable_lambda_reserved_concurrency" {
+  description = "Habilitar reserved concurrency en Lambda. Para cuentas demo puede deshabilitarse para evitar limites de concurrencia no reservada."
+  type        = bool
+  default     = false
+}
+
 # ------------------------------------------------------------
 # OBSERVABILIDAD (cloudwatch.tf)
 # ------------------------------------------------------------
@@ -162,4 +168,32 @@ variable "alb_deletion_protection" {
   description = "Habilitar proteccion contra eliminacion del Application Load Balancer"
   type        = bool
   default     = false
+}
+
+# ------------------------------------------------------------
+# DEMO/STAGING BOOTSTRAP AND FINOPS CONFIG
+# ------------------------------------------------------------
+
+variable "enable_waf" {
+  description = "Habilitar AWS WAFv2 para la distribucion de CloudFront"
+  type        = bool
+  default     = false
+}
+
+variable "enable_cloudfront" {
+  description = "Habilitar CloudFront para servir el frontend. En cuentas AWS no verificadas puede dejarse en false y usar S3 static website para demo."
+  type        = bool
+  default     = false
+}
+
+variable "ecs_desired_count" {
+  description = "Cantidad deseada de tareas ECS corriendo. Inicialmente 0 para permitir subir la imagen a ECR primero."
+  type        = number
+  default     = 0
+}
+
+variable "auto_migrate_database" {
+  description = "Habilitar la ejecucion automatica de migraciones EF Core al iniciar el contenedor de ECS"
+  type        = string
+  default     = "true"
 }

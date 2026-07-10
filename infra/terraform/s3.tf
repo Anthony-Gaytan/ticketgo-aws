@@ -22,6 +22,7 @@
 resource "aws_s3_bucket" "ticketgo_frontend" {
   # checkov:skip=CKV_AWS_144:Para un ambiente de demo, no es necesaria la replicacion de datos en otra region de AWS, lo que ahorra costos de transferencia y almacenamiento.
   # checkov:skip=CKV2_AWS_62:El bucket solo almacena el frontend estatico y no se realizan acciones reactivas ante la subida de objetos, por lo que no requiere notificaciones de eventos.
+  # checkov:skip=CKV2_AWS_6:En la demo sin CloudFront, el bucket requiere Public Access Block permisivo para servir el sitio estatico por S3 Website Endpoint.
   bucket = "ticketgo-frontend-${var.aws_account_id}"
 
   logging {
@@ -93,6 +94,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "ticketgo_frontend_lifecycle" {
 # Bloquea cualquier intento de hacer público el bucket.
 # El frontend solo se sirve a través de CloudFront.
 resource "aws_s3_bucket_public_access_block" "ticketgo_frontend" {
+  # checkov:skip=CKV_AWS_53:En la demo sin CloudFront, se permite acceso publico controlado por bucket policy para servir el frontend por S3 Website Endpoint.
+  # checkov:skip=CKV_AWS_54:En la demo sin CloudFront, se permite una bucket policy publica minima de solo lectura para el frontend estatico.
+  # checkov:skip=CKV_AWS_56:En la demo sin CloudFront, restrict_public_buckets debe quedar desactivado para que el S3 Website Endpoint pueda servir index.html.
   bucket = aws_s3_bucket.ticketgo_frontend.id
 
   block_public_acls       = var.enable_cloudfront
@@ -125,6 +129,7 @@ resource "aws_s3_bucket_website_configuration" "ticketgo_frontend" {
 # Con CloudFront habilitado, solo permite acceso vía OAC.
 # Sin CloudFront, permite lectura pública temporal para demo S3 website.
 resource "aws_s3_bucket_policy" "ticketgo_frontend" {
+  # checkov:skip=CKV_AWS_70:En la demo sin CloudFront, el frontend se publica temporalmente con Principal "*" y permiso exclusivo s3:GetObject sobre objetos del bucket.
   bucket = aws_s3_bucket.ticketgo_frontend.id
 
   policy = var.enable_cloudfront ? jsonencode({

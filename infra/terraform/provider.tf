@@ -35,7 +35,7 @@ terraform {
   # Los valores están escritos directamente aquí de forma intencional.
   # ============================================================
   backend "s3" {
-    bucket = "ticketgo-terraform-state-329871097383-us-east-2"
+    bucket = "ticketgo-terraform-state-783111403254-us-east-2"
     key    = "terraform/ticketgo.tfstate"
     region = "us-east-2"
     # profile        = "anthony-admi" # Comentado para soportar múltiples perfiles en el equipo

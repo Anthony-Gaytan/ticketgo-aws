@@ -25,7 +25,7 @@ variable "aws_profile" {
 variable "aws_account_id" {
   description = "ID de la cuenta AWS"
   type        = string
-  default     = "329871097383"
+  default     = "783111403254"
 }
 
 variable "project_name" {

@@ -72,4 +72,8 @@ resource "aws_lambda_event_source_mapping" "ticketgo_sqs_trigger" {
   function_name    = aws_lambda_function.ticketgo_notification_processor.arn
   batch_size       = 1
   enabled          = true
+
+  depends_on = [
+    aws_iam_role_policy.lambda_sqs_policy
+  ]
 }

@@ -23,7 +23,7 @@ param(
 )
 
 $AWS_REGION  = "us-east-2"
-$BUCKET_NAME = "ticketgo-terraform-state-329871097383-us-east-2"
+$BUCKET_NAME = "ticketgo-terraform-state-783111403254-us-east-2"
 $TABLE_NAME  = "ticketgo-terraform-locks"
 
 Write-Host "============================================================" -ForegroundColor Cyan

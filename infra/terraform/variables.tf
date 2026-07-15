@@ -197,3 +197,19 @@ variable "auto_migrate_database" {
   type        = string
   default     = "true"
 }
+
+# ------------------------------------------------------------
+# DOMINIO PROPIO Y CERTIFICADOS SSL (route53.tf / acm.tf)
+# ------------------------------------------------------------
+
+variable "domain_name" {
+  description = "Nombre de dominio propio del proyecto (ej. ticketgo-aws.online)"
+  type        = string
+  default     = "ticketgo-aws.online"
+}
+
+variable "enable_custom_domain" {
+  description = "Habilitar Route 53 + ACM + HTTPS con dominio propio. Requiere que los nameservers de Namecheap ya apunten a Route 53 antes de validar los certificados."
+  type        = bool
+  default     = false
+}

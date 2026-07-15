@@ -83,6 +83,7 @@ resource "aws_cloudfront_distribution" "ticketgo_cdn" {
   default_root_object = "index.html"
   price_class         = "PriceClass_100"
   web_acl_id          = var.enable_waf ? aws_wafv2_web_acl.ticketgo_waf[0].arn : null
+  aliases             = var.enable_custom_domain ? [var.domain_name, "www.${var.domain_name}"] : []
 
   # Origen: S3 Bucket del frontend
   origin {
@@ -133,9 +134,12 @@ resource "aws_cloudfront_distribution" "ticketgo_cdn" {
     }
   }
 
-  # Certificado SSL por defecto de CloudFront
+  # Certificado SSL: ACM con dominio propio si enable_custom_domain=true,
+  # certificado por defecto de CloudFront si solo es demo.
   viewer_certificate {
-    cloudfront_default_certificate = true
+    cloudfront_default_certificate = var.enable_custom_domain ? false : true
+    acm_certificate_arn            = var.enable_custom_domain ? aws_acm_certificate_validation.cloudfront_cert[0].certificate_arn : null
+    ssl_support_method             = var.enable_custom_domain ? "sni-only" : null
     minimum_protocol_version       = "TLSv1.2_2021"
   }
 

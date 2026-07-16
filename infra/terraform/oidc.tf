@@ -21,6 +21,7 @@ resource "aws_iam_role" "github_actions_role" {
     Version = "2012-10-17"
     Statement = [
       {
+        # El job de plan no usa un Environment y presenta el sujeto de main.
         Effect = "Allow"
         Principal = {
           Federated = aws_iam_openid_connect_provider.github.arn
@@ -29,14 +30,22 @@ resource "aws_iam_role" "github_actions_role" {
         Condition = {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-            # El plan usa el sujeto de la rama y el apply, al estar protegido
-            # por el entorno production, usa el sujeto del entorno.
-            # En ambos casos se exige que la ejecución provenga de main.
-            "token.actions.githubusercontent.com:sub" = [
-              "repo:Anthony-Gaytan/ticketgo-aws:ref:refs/heads/main",
-              "repo:Anthony-Gaytan/ticketgo-aws:environment:production"
-            ]
-            "token.actions.githubusercontent.com:ref" = "refs/heads/main"
+            "token.actions.githubusercontent.com:sub" = "repo:Anthony-Gaytan/ticketgo-aws:ref:refs/heads/main"
+          }
+        }
+      },
+      {
+        # El job de apply usa el Environment production; su sujeto reemplaza
+        # al de la rama y no debe combinarse con una condición ref obligatoria.
+        Effect = "Allow"
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.github.arn
+        }
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Condition = {
+          StringEquals = {
+            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+            "token.actions.githubusercontent.com:sub" = "repo:Anthony-Gaytan/ticketgo-aws:environment:production"
           }
         }
       }

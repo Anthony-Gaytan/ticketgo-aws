@@ -19,6 +19,69 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Terraform init
+        run: terraform -chdir=infra/terraform init
+      - name: Terraform fmt
+        run: terraform -chdir=infra/terraform fmt -check
+      - name: Terraform validate
+        run: terraform -chdir=infra/terraform validate
+      - name: Terraform plan ECR only
+        run: terraform -chdir=infra/terraform plan -target=aws_ecr_repository.ticketgo_api -var-file=environments/production.tfvars -out=tfplan
+      - name: Upload controlled plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-bootstrap-ecr-plan
+          path: infra/terraform/tfplan
+  apply:
+    name: Apply ECR bootstrap
+    needs: plan
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Download controlled plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-bootstrap-ecr-plan
+          path: infra/terraform
+      - name: Apply controlled plan
+        run: terraform -chdir=infra/terraform apply -auto-approve tfplan
+name: Terraform Bootstrap ECR
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-2
+  TF_IN_AUTOMATION: true
+  TF_VAR_aws_account_id: "783111403254"
+
+jobs:
+  plan:
+    name: Plan ECR bootstrap
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3

@@ -66,6 +66,24 @@ variable "frontend_allowed_origins" {
   default     = "http://localhost:5173,http://localhost:3000"
 }
 
+variable "jwt_issuer" {
+  description = "Emisor de los tokens JWT"
+  type        = string
+  default     = "TicketGo.Api"
+}
+
+variable "jwt_audience" {
+  description = "Audiencia de los tokens JWT"
+  type        = string
+  default     = "TicketGo.Client"
+}
+
+variable "jwt_duration_minutes" {
+  description = "Duración de los tokens JWT en minutos"
+  type        = number
+  default     = 120
+}
+
 variable "ecr_image_tag" {
   description = "Tag de la imagen Docker en ECR"
   type        = string

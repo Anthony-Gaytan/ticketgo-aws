@@ -44,14 +44,13 @@ jobs:
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
+          # ECR usa etiquetas inmutables; run_id evita colisiones al reintentar.
+          IMAGE_TAG: ${{ github.sha }}-${{ github.run_id }}
         run: |
           # Construye la imagen Docker
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f backend/TicketGo.Api/Dockerfile backend/
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          # Sube la imagen a ECR
+          # Sube únicamente la etiqueta única; no se sobrescribe "latest".
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Download current ECS task definition

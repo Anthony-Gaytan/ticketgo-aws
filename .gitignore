@@ -15,6 +15,10 @@ obj/
 *.tfstate
 *.tfstate.*
 *.tfvars
+!terraform.tfvars.example
+*.tfplan
+*tfplan*
+tfdestroyplan*
 crash.log
 override.tf
 override.tf.json

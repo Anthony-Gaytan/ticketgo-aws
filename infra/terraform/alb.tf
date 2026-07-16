@@ -71,16 +71,45 @@ resource "aws_lb_target_group" "ticketgo_tg" {
 }
 
 # ============================================================
-# LISTENER HTTP DEL ALB
+# LISTENER HTTP DEL ALB - PUERTO 80
 # ============================================================
-# El Listener escucha peticiones HTTP en el puerto 80.
-# Cuando recibe tráfico, lo reenvía al Target Group del backend.
+# Demo (enable_custom_domain=false): reenvía directamente a ECS.
+# Producción (enable_custom_domain=true): redirige a HTTPS 301.
 resource "aws_lb_listener" "http_listener" {
-  # checkov:skip=CKV_AWS_2:Para un ambiente de demo sin certificado ACM SSL asociado, el ALB escucha en protocolo HTTP para permitir conexion directa a la API.
-  # checkov:skip=CKV_AWS_103:Para un ambiente de demo, el listener utiliza HTTP (puerto 80), por lo que no aplica configuracion de TLS/SSL.
+  # checkov:skip=CKV_AWS_2:El listener HTTP se usa para demo o para redirigir a HTTPS en producción. Con enable_custom_domain=true redirige automáticamente a HTTPS.
+  # checkov:skip=CKV_AWS_103:El listener HTTP en puerto 80 existe para demo o redirección. El tráfico real en producción pasa por el listener HTTPS.
   load_balancer_arn = aws_lb.ticketgo_alb.arn
   port              = 80
   protocol          = "HTTP"
+
+  default_action {
+    type             = var.enable_custom_domain ? "redirect" : "forward"
+    target_group_arn = var.enable_custom_domain ? null : aws_lb_target_group.ticketgo_tg.arn
+
+    dynamic "redirect" {
+      for_each = var.enable_custom_domain ? [1] : []
+      content {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
+    }
+  }
+}
+
+# ============================================================
+# LISTENER HTTPS DEL ALB - PUERTO 443
+# ============================================================
+# Solo se crea cuando enable_custom_domain=true.
+# Requiere certificado ACM validado para api.ticketgo-aws.online.
+# Recibe tráfico HTTPS y lo reenvía al Target Group de ECS.
+resource "aws_lb_listener" "https_listener" {
+  count             = var.enable_custom_domain ? 1 : 0
+  load_balancer_arn = aws_lb.ticketgo_alb.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = aws_acm_certificate_validation.alb_cert[0].certificate_arn
 
   default_action {
     type             = "forward"

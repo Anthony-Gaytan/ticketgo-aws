@@ -160,3 +160,36 @@ output "cloudfront_distribution_id" {
   description = "ID de la distribución CloudFront (necesario para invalidar caché en el deploy del frontend)"
   value       = var.enable_cloudfront ? aws_cloudfront_distribution.ticketgo_cdn[0].id : null
 }
+
+# ------------------------------------------------------------
+# ROUTE 53 + DOMINIO PROPIO
+# ------------------------------------------------------------
+
+output "route53_nameservers" {
+  description = "IMPORTANTE: Configura estos 4 nameservers en Namecheap (Domain List > ticketgo-aws.online > Nameservers > Custom DNS)"
+  value       = var.enable_custom_domain ? aws_route53_zone.ticketgo_zone[0].name_servers : ["enable_custom_domain = false (no aplica)"]
+}
+
+output "route53_zone_id" {
+  description = "ID de la Hosted Zone de Route 53"
+  value       = var.enable_custom_domain ? aws_route53_zone.ticketgo_zone[0].zone_id : null
+}
+
+output "frontend_url" {
+  description = "URL del frontend: dominio propio si enable_custom_domain=true, CloudFront si no"
+  value = (
+    var.enable_custom_domain && var.enable_cloudfront
+    ? "https://${var.domain_name}"
+    : (var.enable_cloudfront ? "https://${aws_cloudfront_distribution.ticketgo_cdn[0].domain_name}" : null)
+  )
+}
+
+output "api_url" {
+  description = "URL de la API: dominio propio si enable_custom_domain=true, ALB si no"
+  value = (
+    var.enable_custom_domain
+    ? "https://api.${var.domain_name}"
+    : "http://${aws_lb.ticketgo_alb.dns_name}"
+  )
+}
+

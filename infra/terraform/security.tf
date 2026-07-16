@@ -22,13 +22,21 @@ resource "aws_security_group" "alb_sg" {
   # checkov:skip=CKV_AWS_260:El ALB es publico por diseño para recibir peticiones HTTP/HTTPS desde Internet abiertas a todo el mundo (0.0.0.0/0 en el puerto 80/443).
   # checkov:skip=CKV_AWS_382:Se permite la salida de red abierta (egress 0.0.0.0/0 en todos los puertos) de forma predeterminada para simplificar las integraciones externas y responder a clientes.
   name        = "ticketgo-alb-sg"
-  description = "Permite trafico HTTP publico hacia el ALB"
+  description = "Permite trafico HTTP/HTTPS publico hacia el ALB"
   vpc_id      = aws_vpc.ticketgo_vpc.id
 
   ingress {
     description = "HTTP desde Internet"
     from_port   = 80
     to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "HTTPS desde Internet (produccion con dominio propio)"
+    from_port   = 443
+    to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }

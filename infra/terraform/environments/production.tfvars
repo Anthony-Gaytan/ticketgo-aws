@@ -13,8 +13,8 @@ ecs_desired_count = 2
 ecs_max_capacity  = 6
 ecr_image_tag     = "latest"
 
-# Las migraciones se ejecutaran como una tarea controlada, no al iniciar cada contenedor.
-auto_migrate_database    = "false"
+# Migración inicial de producción: se desactivará después de crear el esquema.
+auto_migrate_database    = "true"
 frontend_allowed_origins = "https://ticketgo-aws.online,https://www.ticketgo-aws.online"
 
 # PostgreSQL productivo.

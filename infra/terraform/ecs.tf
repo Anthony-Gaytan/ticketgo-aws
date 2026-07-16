@@ -96,6 +96,18 @@ resource "aws_ecs_task_definition" "ticketgo_api_task" {
           value = var.frontend_allowed_origins
         },
         {
+          name  = "Jwt__Issuer"
+          value = var.jwt_issuer
+        },
+        {
+          name  = "Jwt__Audience"
+          value = var.jwt_audience
+        },
+        {
+          name  = "Jwt__DurationInMinutes"
+          value = tostring(var.jwt_duration_minutes)
+        },
+        {
           name  = "Redis__ConnectionString"
           value = "${aws_elasticache_cluster.ticketgo_redis.cache_nodes[0].address}:${aws_elasticache_cluster.ticketgo_redis.cache_nodes[0].port}"
         }

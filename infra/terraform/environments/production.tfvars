@@ -16,6 +16,9 @@ ecr_image_tag     = "latest"
 # Migración inicial de producción: se desactivará después de crear el esquema.
 auto_migrate_database    = "true"
 frontend_allowed_origins = "https://ticketgo-aws.online,https://www.ticketgo-aws.online"
+jwt_issuer               = "TicketGo.Api"
+jwt_audience             = "TicketGo.Client"
+jwt_duration_minutes     = 120
 
 # PostgreSQL productivo.
 db_instance_class             = "db.t4g.small"

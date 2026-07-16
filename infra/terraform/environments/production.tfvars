@@ -14,7 +14,8 @@ ecs_max_capacity  = 6
 ecr_image_tag     = "latest"
 
 # Las migraciones se ejecutaran como una tarea controlada, no al iniciar cada contenedor.
-auto_migrate_database = "false"
+auto_migrate_database    = "false"
+frontend_allowed_origins = "https://ticketgo-aws.online,https://www.ticketgo-aws.online"
 
 # PostgreSQL productivo.
 db_instance_class             = "db.t4g.small"

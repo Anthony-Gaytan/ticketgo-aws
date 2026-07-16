@@ -92,6 +92,10 @@ resource "aws_ecs_task_definition" "ticketgo_api_task" {
           value = var.auto_migrate_database
         },
         {
+          name  = "FRONTEND_ALLOWED_ORIGINS"
+          value = var.frontend_allowed_origins
+        },
+        {
           name  = "Redis__ConnectionString"
           value = "${aws_elasticache_cluster.ticketgo_redis.cache_nodes[0].address}:${aws_elasticache_cluster.ticketgo_redis.cache_nodes[0].port}"
         }

@@ -36,7 +36,9 @@ enable_custom_domain = true
 domain_name          = "ticketgo-aws.online"
 
 # Operacion y procesamiento asincrono.
-log_retention_days                 = 30
-lambda_memory                      = 256
-lambda_timeout                     = 30
-enable_lambda_reserved_concurrency = true
+log_retention_days = 30
+lambda_memory      = 256
+lambda_timeout     = 30
+# La cuenta AWS actual mantiene el mínimo de 10 ejecuciones sin reservar.
+# Se desactiva la reserva hasta solicitar un aumento de cuota de concurrencia.
+enable_lambda_reserved_concurrency = false

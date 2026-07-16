@@ -25,14 +25,17 @@ resource "aws_s3_bucket" "ticketgo_frontend" {
   # checkov:skip=CKV2_AWS_6:En la demo sin CloudFront, el bucket requiere Public Access Block permisivo para servir el sitio estatico por S3 Website Endpoint.
   bucket = "ticketgo-frontend-${var.aws_account_id}"
 
-  logging {
-    target_bucket = aws_s3_bucket.ticketgo_s3_logging.id
-    target_prefix = "log/"
-  }
-
   tags = {
     Name = "ticketgo-frontend"
   }
+}
+
+# Configuración de logging del bucket (la opción logging dentro de
+# aws_s3_bucket está deprecada por las versiones actuales del provider).
+resource "aws_s3_bucket_logging" "ticketgo_frontend" {
+  bucket        = aws_s3_bucket.ticketgo_frontend.id
+  target_bucket = aws_s3_bucket.ticketgo_s3_logging.id
+  target_prefix = "log/"
 }
 
 # ============================================================

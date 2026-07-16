@@ -144,7 +144,10 @@ resource "aws_ecs_service" "ticketgo_api_service" {
   }
 
   depends_on = [
-    aws_lb_listener.http_listener
+    # En producción el listener HTTP solo redirige a HTTPS. El target group
+    # queda asociado recién cuando existe también el listener HTTPS.
+    aws_lb_listener.http_listener,
+    aws_lb_listener.https_listener
   ]
 
   tags = {

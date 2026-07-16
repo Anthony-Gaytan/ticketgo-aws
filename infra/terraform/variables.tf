@@ -60,6 +60,12 @@ variable "container_port" {
   default     = 8080
 }
 
+variable "frontend_allowed_origins" {
+  description = "Orígenes web autorizados por la política CORS de la API"
+  type        = string
+  default     = "http://localhost:5173,http://localhost:3000"
+}
+
 variable "ecr_image_tag" {
   description = "Tag de la imagen Docker en ECR"
   type        = string

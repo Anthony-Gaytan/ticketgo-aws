@@ -34,6 +34,143 @@ resource "aws_route53_zone" "ticketgo_zone" {
 }
 
 # ============================================================
+# DNSSEC - FIRMA DE LA ZONA PÚBLICA
+# ============================================================
+# Route 53 exige una clave KMS asimétrica ECC_NIST_P256 en
+# us-east-1 para crear la Key Signing Key (KSK) de DNSSEC.
+resource "aws_kms_key" "route53_dnssec" {
+  count    = var.enable_custom_domain ? 1 : 0
+  provider = aws.us_east_1
+
+  # checkov:skip=CKV_AWS_7:AWS KMS no admite rotación automática para claves asimétricas SIGN_VERIFY utilizadas por Route 53 DNSSEC.
+  description              = "Clave KMS para DNSSEC de ${var.domain_name}"
+  customer_master_key_spec = "ECC_NIST_P256"
+  key_usage                = "SIGN_VERIFY"
+  deletion_window_in_days  = 7
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "EnableAccountAdministration"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${var.aws_account_id}:root"
+        }
+        Action   = "kms:*"
+        Resource = "*"
+      },
+      {
+        Sid    = "AllowRoute53DNSSECService"
+        Effect = "Allow"
+        Principal = {
+          Service = "dnssec-route53.amazonaws.com"
+        }
+        Action = [
+          "kms:DescribeKey",
+          "kms:GetPublicKey",
+          "kms:Sign"
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = var.aws_account_id
+          }
+          ArnLike = {
+            "aws:SourceArn" = "arn:aws:route53:::hostedzone/*"
+          }
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name = "ticketgo-route53-dnssec"
+  }
+}
+
+resource "aws_kms_alias" "route53_dnssec" {
+  count    = var.enable_custom_domain ? 1 : 0
+  provider = aws.us_east_1
+
+  name          = "alias/ticketgo-route53-dnssec"
+  target_key_id = aws_kms_key.route53_dnssec[0].key_id
+}
+
+resource "aws_route53_key_signing_key" "ticketgo" {
+  count = var.enable_custom_domain ? 1 : 0
+
+  hosted_zone_id             = aws_route53_zone.ticketgo_zone[0].id
+  key_management_service_arn = aws_kms_key.route53_dnssec[0].arn
+  name                       = "ticketgo"
+  status                     = "ACTIVE"
+}
+
+resource "aws_route53_hosted_zone_dnssec" "ticketgo" {
+  count = var.enable_custom_domain ? 1 : 0
+
+  hosted_zone_id = aws_route53_zone.ticketgo_zone[0].id
+
+  depends_on = [aws_route53_key_signing_key.ticketgo]
+}
+
+# ============================================================
+# ROUTE 53 QUERY LOGGING
+# ============================================================
+# Los logs de consultas de zonas públicas deben almacenarse en
+# un Log Group de CloudWatch ubicado en us-east-1.
+resource "aws_cloudwatch_log_group" "route53_queries" {
+  count    = var.enable_custom_domain ? 1 : 0
+  provider = aws.us_east_1
+
+  # checkov:skip=CKV_AWS_158:El cifrado KMS de este Log Group global se difiere para evitar una segunda clave simétrica dedicada en us-east-1 en el ambiente académico.
+  name              = "/aws/route53/${var.domain_name}"
+  retention_in_days = 365
+
+  tags = {
+    Name = "ticketgo-route53-query-logs"
+  }
+}
+
+data "aws_iam_policy_document" "route53_query_logging" {
+  count    = var.enable_custom_domain ? 1 : 0
+  provider = aws.us_east_1
+
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["route53.amazonaws.com"]
+    }
+
+    actions = [
+      "logs:CreateLogStream",
+      "logs:PutLogEvents"
+    ]
+
+    resources = ["${aws_cloudwatch_log_group.route53_queries[0].arn}:log-stream:*"]
+  }
+}
+
+resource "aws_cloudwatch_log_resource_policy" "route53_query_logging" {
+  count    = var.enable_custom_domain ? 1 : 0
+  provider = aws.us_east_1
+
+  policy_name     = "ticketgo-route53-query-logging"
+  policy_document = data.aws_iam_policy_document.route53_query_logging[0].json
+}
+
+resource "aws_route53_query_log" "ticketgo" {
+  count = var.enable_custom_domain ? 1 : 0
+
+  zone_id                  = aws_route53_zone.ticketgo_zone[0].zone_id
+  cloudwatch_log_group_arn = aws_cloudwatch_log_group.route53_queries[0].arn
+
+  depends_on = [aws_cloudwatch_log_resource_policy.route53_query_logging]
+}
+
+# ============================================================
 # REGISTRO A - DOMINIO RAÍZ → CLOUDFRONT
 # ============================================================
 # ticketgo-aws.online → CloudFront distribution

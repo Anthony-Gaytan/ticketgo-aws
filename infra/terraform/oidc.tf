@@ -29,10 +29,8 @@ resource "aws_iam_role" "github_actions_role" {
         Condition = {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-          }
-          # El subject valida que solo este repositorio pueda asumir el rol
-          StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:Anthony-Gaytan/ticketgo-aws:*"
+            # Solo los workflows ejecutados desde main pueden asumir el rol.
+            "token.actions.githubusercontent.com:sub" = "repo:Anthony-Gaytan/ticketgo-aws:ref:refs/heads/main"
           }
         }
       }

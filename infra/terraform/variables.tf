@@ -78,6 +78,12 @@ variable "ecs_memory" {
   default     = "512"
 }
 
+variable "ecs_max_capacity" {
+  description = "Cantidad maxima de tareas ECS permitida por Auto Scaling"
+  type        = number
+  default     = 3
+}
+
 # ------------------------------------------------------------
 # LAMBDA (lambda.tf)
 # ------------------------------------------------------------
@@ -126,6 +132,18 @@ variable "db_instance_class" {
   default     = "db.t3.micro"
 }
 
+variable "db_allocated_storage" {
+  description = "Almacenamiento inicial de RDS en GiB"
+  type        = number
+  default     = 20
+}
+
+variable "db_max_allocated_storage" {
+  description = "Limite de autoescalado de almacenamiento de RDS en GiB"
+  type        = number
+  default     = 100
+}
+
 variable "db_name" {
   description = "Nombre de la base de datos PostgreSQL"
   type        = string
@@ -142,6 +160,24 @@ variable "rds_multi_az" {
   description = "Habilitar Multi-AZ para RDS (duplica el costo)"
   type        = bool
   default     = true
+}
+
+variable "rds_backup_retention_days" {
+  description = "Dias de retencion de backups automaticos de RDS"
+  type        = number
+  default     = 7
+}
+
+variable "rds_skip_final_snapshot" {
+  description = "Omitir el snapshot final al eliminar RDS. Debe ser false en produccion."
+  type        = bool
+  default     = true
+}
+
+variable "rds_final_snapshot_identifier" {
+  description = "Nombre del snapshot final utilizado al eliminar RDS"
+  type        = string
+  default     = "ticketgo-db-final-snapshot"
 }
 
 # ------------------------------------------------------------

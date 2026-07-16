@@ -16,6 +16,7 @@ obj/
 *.tfstate.*
 *.tfvars
 !terraform.tfvars.example
+!infra/terraform/environments/production.tfvars
 *.tfplan
 *tfplan*
 tfdestroyplan*

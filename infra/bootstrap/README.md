@@ -73,15 +73,15 @@ Settings → Secrets and variables → Actions → New repository secret
 
 No se deben guardar Access Keys ni contraseñas de usuarios IAM en GitHub.
 
-### Paso 6 — Proteger el Apply con un Environment
+### Paso 6 — Proteger el Apply de producción con un Environment
 
-Crea el Environment `aws-demo` en GitHub:
+Crea el Environment `production` en GitHub:
 
 ```text
-Settings → Environments → New environment → aws-demo
+Settings → Environments → New environment → production
 ```
 
-Configura al menos un aprobador en `Required reviewers`. El workflow generará primero un plan y esperará la aprobación antes de ejecutar exactamente ese plan.
+Configura al menos un aprobador en `Required reviewers`. El workflow generará primero un plan con `environments/production.tfvars` y esperará la aprobación antes de ejecutar exactamente ese plan.
 
 ## ⚠️ Importante
 

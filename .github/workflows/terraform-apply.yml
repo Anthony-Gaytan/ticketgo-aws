@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: terraform-aws-demo
+  group: terraform-production
   cancel-in-progress: false
 
 jobs:
@@ -51,9 +51,8 @@ jobs:
       - name: Terraform Plan
         run: |
           terraform plan -input=false -lock-timeout=5m -out=tfplan \
-            -var="ses_email_identity=${{ secrets.SES_EMAIL_IDENTITY }}" \
-            -var="rds_multi_az=false" \
-            -var="rds_deletion_protection=false"
+            -var-file="environments/production.tfvars" \
+            -var="ses_email_identity=${{ secrets.SES_EMAIL_IDENTITY }}"
         working-directory: infra/terraform
 
       - name: Upload reviewed plan
@@ -68,7 +67,7 @@ jobs:
     name: Terraform Apply
     needs: plan
     runs-on: ubuntu-latest
-    environment: aws-demo
+    environment: production
 
     steps:
       - name: Checkout Code

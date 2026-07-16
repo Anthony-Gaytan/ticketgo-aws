@@ -7,6 +7,8 @@ on:
     paths:
       - 'backend/**'
       - '.github/workflows/deploy-api.yml'
+  # Permite desplegar la versión actual de main sin crear commits artificiales.
+  workflow_dispatch:
 
 env:
   AWS_REGION: us-east-2

@@ -97,9 +97,10 @@ resource "aws_db_instance" "ticketgo_db" {
   # La almacena en Secrets Manager de forma segura
   manage_master_user_password = true
 
-  allocated_storage = 20
-  storage_type      = "gp3"
-  storage_encrypted = true
+  allocated_storage     = var.db_allocated_storage
+  max_allocated_storage = var.db_max_allocated_storage
+  storage_type          = "gp3"
+  storage_encrypted     = true
 
   db_subnet_group_name   = aws_db_subnet_group.ticketgo_db_subnet_group.name
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
@@ -127,8 +128,9 @@ resource "aws_db_instance" "ticketgo_db" {
   # Parameter Group para Query Logging (CKV2_AWS_30)
   parameter_group_name = aws_db_parameter_group.ticketgo_db_pg.name
 
-  backup_retention_period = 7
-  skip_final_snapshot     = true
+  backup_retention_period   = var.rds_backup_retention_days
+  skip_final_snapshot       = var.rds_skip_final_snapshot
+  final_snapshot_identifier = var.rds_skip_final_snapshot ? null : var.rds_final_snapshot_identifier
 
   tags = {
     Name = "ticketgo-db"

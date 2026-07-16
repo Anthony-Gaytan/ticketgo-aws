@@ -29,8 +29,14 @@ resource "aws_iam_role" "github_actions_role" {
         Condition = {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-            # Solo los workflows ejecutados desde main pueden asumir el rol.
-            "token.actions.githubusercontent.com:sub" = "repo:Anthony-Gaytan/ticketgo-aws:ref:refs/heads/main"
+            # El plan usa el sujeto de la rama y el apply, al estar protegido
+            # por el entorno production, usa el sujeto del entorno.
+            # En ambos casos se exige que la ejecución provenga de main.
+            "token.actions.githubusercontent.com:sub" = [
+              "repo:Anthony-Gaytan/ticketgo-aws:ref:refs/heads/main",
+              "repo:Anthony-Gaytan/ticketgo-aws:environment:production"
+            ]
+            "token.actions.githubusercontent.com:ref" = "refs/heads/main"
           }
         }
       }

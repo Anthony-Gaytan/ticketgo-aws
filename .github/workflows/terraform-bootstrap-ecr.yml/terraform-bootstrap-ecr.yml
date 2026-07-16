@@ -1,0 +1,99 @@
+name: Terraform Bootstrap ECR
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-2
+  TF_IN_AUTOMATION: true
+  TF_VAR_aws_account_id: "783111403254"
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: terraform-bootstrap-ecr
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Terraform Plan ECR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.0
+
+      - name: Terraform Init
+        run: terraform init -input=false
+        working-directory: infra/terraform
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        working-directory: infra/terraform
+
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: infra/terraform
+
+      - name: Terraform Plan ECR only
+        run: |
+          terraform plan -input=false -lock-timeout=5m -out=tfplan \
+            -target=aws_ecr_repository.ticketgo_api \
+            -var-file="environments/production.tfvars"
+        working-directory: infra/terraform
+
+      - name: Upload reviewed plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-bootstrap-ecr-plan
+          path: infra/terraform/tfplan
+          retention-days: 1
+          if-no-files-found: error
+
+  apply:
+    name: Terraform Apply ECR only
+    needs: plan
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.0
+
+      - name: Terraform Init
+        run: terraform init -input=false
+        working-directory: infra/terraform
+
+      - name: Download reviewed plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-bootstrap-ecr-plan
+          path: infra/terraform
+
+      - name: Terraform Apply ECR only
+        run: terraform apply -input=false -lock-timeout=5m tfplan
+        working-directory: infra/terraform

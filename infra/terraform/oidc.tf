@@ -32,7 +32,7 @@ resource "aws_iam_role" "github_actions_role" {
           }
           # El subject valida que solo este repositorio pueda asumir el rol
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:*/ticketgo-aws:*"
+            "token.actions.githubusercontent.com:sub" = "repo:Anthony-Gaytan/ticketgo-aws:*"
           }
         }
       }

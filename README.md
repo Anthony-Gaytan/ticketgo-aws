@@ -217,7 +217,7 @@ Este archivo ya existe en tu entorno de desarrollo para correr localmente:
 Crea un archivo `terraform.tfvars` en `infra/terraform/` configurando tus parámetros específicos:
 ```hcl
 aws_region         = "us-east-2"
-aws_account_id     = "329871097383"
+aws_account_id     = "783111403254"
 project_name       = "ticketgo"
 environment        = "dev"
 container_port     = 8080

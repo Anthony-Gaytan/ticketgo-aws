@@ -1,0 +1,27 @@
+# Cuenta AWS compartida de TicketGo
+aws_account_id = "783111403254"
+aws_region     = "us-east-2"
+
+# Cada integrante configura localmente un perfil autorizado.
+# Este archivo es solo un ejemplo y no contiene credenciales.
+aws_profile = "ticketgo-shared"
+
+project_name = "ticketgo"
+environment  = "dev"
+
+# Configuración de demo con costos reducidos
+db_instance_class       = "db.t3.micro"
+rds_multi_az            = false
+rds_deletion_protection = false
+alb_deletion_protection = false
+ecs_desired_count       = 0
+ecr_image_tag           = "v1"
+
+# Activar cuando CloudFront y el dominio estén listos
+enable_cloudfront    = false
+enable_waf           = false
+enable_custom_domain = false
+domain_name          = "ticketgo-aws.online"
+
+# Reemplazar por una identidad que el equipo pueda verificar en SES
+ses_email_identity = "correo-equipo@ejemplo.com"

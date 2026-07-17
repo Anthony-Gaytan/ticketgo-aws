@@ -22,12 +22,21 @@ concurrency:
 
 jobs:
   unit-tests:
-    name: Run .NET Unit Tests
+    name: Unit Tests and SonarQube Analysis
     runs-on: ubuntu-latest
+
+    env:
+      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          # SonarQube necesita el historial para asignar correctamente autores
+          # y calcular el codigo nuevo.
+          fetch-depth: 0
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
@@ -36,6 +45,28 @@ jobs:
 
       - name: Restore dependencies
         run: dotnet restore backend/TicketGo.Tests/TicketGo.Tests.csproj
+
+      - name: Validate SonarQube configuration
+        shell: bash
+        run: |
+          if [[ -z "$SONAR_PROJECT_KEY" || -z "$SONAR_HOST_URL" || -z "$SONAR_TOKEN" ]]; then
+            echo "Configure SONAR_PROJECT_KEY como variable y SONAR_HOST_URL/SONAR_TOKEN como secrets del repositorio."
+            exit 1
+          fi
+
+      - name: Install SonarQube scanner
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Begin SonarQube analysis
+        run: >
+          dotnet sonarscanner begin
+          /k:"$SONAR_PROJECT_KEY"
+          /d:sonar.host.url="$SONAR_HOST_URL"
+          /d:sonar.token="$SONAR_TOKEN"
+          /d:sonar.qualitygate.wait=true
+          /d:sonar.qualitygate.timeout=300
+          /d:sonar.cs.vstest.reportsPaths="TestResults/*.trx"
+          /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml"
 
       - name: Build backend and tests
         run: dotnet build backend/TicketGo.Tests/TicketGo.Tests.csproj --configuration Release --no-restore
@@ -48,7 +79,13 @@ jobs:
           --logger "console;verbosity=normal"
           --logger "trx;LogFileName=ticketgo-tests.trx"
           --results-directory TestResults
-          --collect "XPlat Code Coverage"
+          --collect "XPlat Code Coverage;Format=opencover"
+
+      - name: Publish SonarQube analysis and Quality Gate
+        if: success()
+        run: >
+          dotnet sonarscanner end
+          /d:sonar.token="$SONAR_TOKEN"
 
       - name: Upload test results and coverage
         if: always()

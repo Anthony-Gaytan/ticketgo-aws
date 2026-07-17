@@ -46,18 +46,22 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore backend/TicketGo.Tests/TicketGo.Tests.csproj
 
-      - name: Validate SonarQube configuration
+      - name: Check SonarQube configuration
         shell: bash
         run: |
           if [[ -z "$SONAR_PROJECT_KEY" || -z "$SONAR_HOST_URL" || -z "$SONAR_TOKEN" ]]; then
-            echo "Configure SONAR_PROJECT_KEY como variable y SONAR_HOST_URL/SONAR_TOKEN como secrets del repositorio."
-            exit 1
+            echo "::warning::SonarQube omitido. Configure SONAR_PROJECT_KEY como variable y SONAR_HOST_URL/SONAR_TOKEN como secrets del repositorio."
+            echo "SONAR_CONFIGURED=false" >> "$GITHUB_ENV"
+          else
+            echo "SONAR_CONFIGURED=true" >> "$GITHUB_ENV"
           fi
 
       - name: Install SonarQube scanner
+        if: env.SONAR_CONFIGURED == 'true'
         run: dotnet tool install --global dotnet-sonarscanner
 
       - name: Begin SonarQube analysis
+        if: env.SONAR_CONFIGURED == 'true'
         run: >
           dotnet sonarscanner begin
           /k:"$SONAR_PROJECT_KEY"
@@ -82,7 +86,7 @@ jobs:
           --collect "XPlat Code Coverage;Format=opencover"
 
       - name: Publish SonarQube analysis and Quality Gate
-        if: success()
+        if: env.SONAR_CONFIGURED == 'true' && success()
         run: >
           dotnet sonarscanner end
           /d:sonar.token="$SONAR_TOKEN"

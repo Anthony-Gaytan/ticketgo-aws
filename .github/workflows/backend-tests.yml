@@ -1,0 +1,60 @@
+name: Backend Unit Tests
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-tests.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    name: Run .NET Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore backend/TicketGo.Tests/TicketGo.Tests.csproj
+
+      - name: Build backend and tests
+        run: dotnet build backend/TicketGo.Tests/TicketGo.Tests.csproj --configuration Release --no-restore
+
+      - name: Run unit tests
+        run: >
+          dotnet test backend/TicketGo.Tests/TicketGo.Tests.csproj
+          --configuration Release
+          --no-build
+          --logger "console;verbosity=normal"
+          --logger "trx;LogFileName=ticketgo-tests.trx"
+          --results-directory TestResults
+          --collect "XPlat Code Coverage"
+
+      - name: Upload test results and coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results-${{ github.run_number }}
+          path: TestResults/
+          if-no-files-found: warn
+          retention-days: 14
